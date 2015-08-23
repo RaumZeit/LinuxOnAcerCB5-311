@@ -191,7 +191,6 @@ fi
 cp -ar /lib/firmware/* /tmp/urfs/lib/firmware/
 
 cat > /tmp/urfs/install-minimal.sh <<EOF
-useradd -m -g users -G wheel alarm
 pacman -Syy --needed --confirm sudo wicd wicd-gtk chromium chromium-pepper-flash xorg-server xorg-server-utils xorg-apps
 EOF
 
