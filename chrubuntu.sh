@@ -146,7 +146,7 @@ then
   ubuntu_arch="armhf"
   if [ "$ubuntu_metapackage" = "default" ]
   then
-    ubuntu_metapackage="ubuntu-desktop"
+    ubuntu_metapackage="xubuntu-desktop"
   fi
 else
   echo -e "Error: This script doesn't know how to install ChrUbuntu on $chromebook_arch"
@@ -248,6 +248,7 @@ then
 fi
 
 echo -e "apt-get -y update
+touch /etc/init.d/whoopsie
 apt-get -y dist-upgrade
 apt-get -y install ubuntu-minimal
 apt-get -y install wget
@@ -309,8 +310,9 @@ echo 'install mwifiex_sdio /sbin/modprobe --ignore-install mwifiex_sdio && sleep
 # BIG specific files here
 cp /etc/X11/xorg.conf.d/tegra.conf /tmp/urfs/usr/share/X11/xorg.conf.d/
 l4tdir=`mktemp -d`
-l4t=Tegra124_Linux_R19.3.0_armhf.tbz2
-wget -P ${l4tdir} https://developer.nvidia.com/sites/default/files/akamai/mobile/files/L4T/${l4t}
+l4t=Tegra124_Linux_R21.3.0_armhf.tbz2
+wget -P ${l4tdir} http://developer.download.nvidia.com/embedded/L4T/r21_Release_v3.0/${l4t}
+#wget -P ${l4tdir} https://developer.nvidia.com/sites/default/files/akamai/mobile/files/L4T/${l4t}
 cd ${l4tdir}
 tar xvpf ${l4t}
 cd Linux_for_Tegra/rootfs/
@@ -329,7 +331,7 @@ echo "/usr/lib/arm-linux-gnueabihf/tegra" > /tmp/urfs/usr/lib/arm-linux-gnueabih
 cat >/tmp/urfs/etc/udev/rules.d/99-tegra-lid-switch.rules <<EOF
 ACTION=="remove", GOTO="tegra_lid_switch_end"
 
-SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="platform", KERNELS=="gpio-keys.4", TAG+="power-switch"
+SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="platform", KERNELS=="gpio-keys.5", TAG+="power-switch"
 
 LABEL="tegra_lid_switch_end"
 EOF
@@ -343,8 +345,8 @@ KERNEL=="nvhost-ctrl", GROUP="video", MODE="0660"
 KERNEL=="nvhost-ctrl-gpu", GROUP="video", MODE="0660"
 KERNEL=="nvhost-dbg-gpu", GROUP="video", MODE="0660"
 KERNEL=="nvhost-gpu", GROUP="video", MODE="0660"
-KERNEL=="nvhost-msenc", GROUP="video", MODE=0660"
-KERNEL=="nvhost-prof-gpu", GROUP="video", MODE=0660"
+KERNEL=="nvhost-msenc", GROUP="video", MODE="0660"
+KERNEL=="nvhost-prof-gpu", GROUP="video", MODE="0660"
 KERNEL=="nvhost-tsec", GROUP="video", MODE="0660"
 KERNEL=="nvhost-vic", GROUP="video", MODE="0660"
 KERNEL=="nvmap", GROUP="video", MODE="0660"
