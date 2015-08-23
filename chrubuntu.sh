@@ -21,7 +21,7 @@ then
   initctl stop powerd
 fi
 
-setterm -blank 0
+#setterm -blank 0
 
 if [ "$3" != "" ]; then
   target_disk=$3
