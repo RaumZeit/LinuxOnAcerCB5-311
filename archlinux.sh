@@ -190,21 +190,39 @@ then
 fi
 cp -ar /lib/firmware/* /tmp/urfs/lib/firmware/
 
-cat > /tmp/urfs/install-minimal.sh <<EOF
-pacman -Syy --needed --confirm sudo wicd wicd-gtk chromium chromium-pepper-flash xorg-server xorg-server-utils xorg-apps
+cat > /tmp/urfs/install-develbase.sh <<EOF
+pacman -Syy --needed --noconfirm sudo dialog base-devel vim rsync git
 EOF
 
-chmod a+x /tmp/urfs/install-minimal.sh
-chroot /tmp/urfs /bin/bash -c /install-minimal.sh
-rm /tmp/urfs/install-minimal.sh
+chmod a+x /tmp/urfs/install-develbase.sh
+chroot /tmp/urfs /bin/bash -c /install-develbase.sh
+rm /tmp/urfs/install-develbase.sh
+
+cat > /tmp/urfs/install-xbase.sh <<EOF
+pacman -Syy --needed --noconfirm wicd wicd-gtk lightdm lightdm-gtk-greeter chromium chromium-pepper-flash xorg-server xorg-server-utils xorg-apps xf86-input-synaptics alsa-lib alsa-utils alsa-tools alsa-oss alsa-firmware alsa-plugins
+systemctl enable wicd
+systemctl enable lightdm
+EOF
+
+chmod a+x /tmp/urfs/install-xbase.sh
+chroot /tmp/urfs /bin/bash -c /install-xbase.sh
+rm /tmp/urfs/install-xbase.sh
 
 cat > /tmp/urfs/install-xfce4.sh <<EOF
-pacman -Syy --needed --confirm  xfce4 xfce4-goodies
+pacman -Syy --needed --noconfirm  xfce4 xfce4-goodies
 EOF
 
 chmod a+x /tmp/urfs/install-xfce4.sh
 chroot /tmp/urfs /bin/bash -c /install-xfce4.sh
 rm /tmp/urfs/install-xfce4.sh
+
+cat > /tmp/urfs/install-utils.sh <<EOF
+pacman -Syy --needed --noconfirm  sshfs screen file-roller
+EOF
+
+chmod a+x /tmp/urfs/install-utils.sh
+chroot /tmp/urfs /bin/bash -c /install-utils.sh
+rm /tmp/urfs/install-utils.sh
 
 
 # copy adobe flash player plugin
