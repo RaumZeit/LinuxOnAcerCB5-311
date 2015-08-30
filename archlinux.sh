@@ -199,8 +199,8 @@ chroot /tmp/urfs /bin/bash -c /install-develbase.sh
 rm /tmp/urfs/install-develbase.sh
 
 cat > /tmp/urfs/install-xbase.sh <<EOF
-pacman -Syy --needed --noconfirm wicd wicd-gtk lightdm lightdm-gtk-greeter chromium chromium-pepper-flash xorg-server xorg-server-utils xorg-apps xf86-input-synaptics alsa-lib alsa-utils alsa-tools alsa-oss alsa-firmware alsa-plugins
-systemctl enable wicd
+pacman -Syy --needed --noconfirm networkmanager network-manager-applet lightdm lightdm-gtk-greeter chromium chromium-pepper-flash xorg-server xorg-server-utils xorg-apps xf86-input-synaptics alsa-lib alsa-utils alsa-tools alsa-oss alsa-firmware alsa-plugins
+systemctl enable NetworkManager
 systemctl enable lightdm
 EOF
 
