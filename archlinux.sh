@@ -191,7 +191,7 @@ fi
 cp -ar /lib/firmware/* /tmp/urfs/lib/firmware/
 
 cat > /tmp/urfs/install-develbase.sh <<EOF
-pacman -Syy --needed --noconfirm sudo dialog base-devel vim rsync git
+pacman -Syy --needed --noconfirm sudo dialog base-devel devtools vim rsync git
 EOF
 
 chmod a+x /tmp/urfs/install-develbase.sh
@@ -199,7 +199,13 @@ chroot /tmp/urfs /bin/bash -c /install-develbase.sh
 rm /tmp/urfs/install-develbase.sh
 
 cat > /tmp/urfs/install-xbase.sh <<EOF
-pacman -Syy --needed --noconfirm networkmanager network-manager-applet lightdm lightdm-gtk-greeter chromium chromium-pepper-flash xorg-server xorg-server-utils xorg-apps xf86-input-synaptics alsa-lib alsa-utils alsa-tools alsa-oss alsa-firmware alsa-plugins
+pacman -Syy --needed --noconfirm \
+        networkmanager network-manager-applet \
+        lightdm lightdm-gtk-greeter \
+        chromium chromium-pepper-flash \
+        xorg-server xorg-server-utils xorg-apps xf86-input-synaptics \
+        alsa-lib alsa-utils alsa-tools alsa-oss alsa-firmware alsa-plugins \
+        pulseaudio pulseaudio-alsa
 systemctl enable NetworkManager
 systemctl enable lightdm
 EOF
