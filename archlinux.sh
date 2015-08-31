@@ -207,7 +207,7 @@ rm /tmp/arfs/install-develbase.sh
 
 cat > /tmp/arfs/install-xbase.sh <<EOF
 pacman -Syy --needed --noconfirm \
-        networkmanager network-manager-applet \
+        iw networkmanager network-manager-applet \
         lightdm lightdm-gtk-greeter \
         chromium chromium-pepper-flash \
         xorg-server xorg-server-utils xorg-apps xf86-input-synaptics \
