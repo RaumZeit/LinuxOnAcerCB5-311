@@ -251,7 +251,7 @@ sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-R2
 sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-R21.4.0-1.src.tar.gz
 cd gpu-nvidia-tegra-k1
 sudo -u nobody -H makepkg
-pacman --needed --noconfirm -U gpu-nvidia-tegra-k1-R21.4.0-1-armv7h.pkg.tar.xz
+yes | pacman --needed --noconfirm -U gpu-nvidia-tegra-k1-R21.4.0-1-armv7h.pkg.tar.xz
 cd ..
 rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-R21.4.0-1.src.tar.gz
 
