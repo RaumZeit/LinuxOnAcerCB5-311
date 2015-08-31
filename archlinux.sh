@@ -198,7 +198,7 @@ cp -ar /lib/firmware/* /tmp/arfs/lib/firmware/
 cat > /tmp/arfs/install-develbase.sh <<EOF
 pacman -Syy --needed --noconfirm sudo wget dialog base-devel devtools vim rsync git
 usermod -aG wheel alarm
-sed 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
+sed -i 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
 EOF
 
 chmod a+x /tmp/arfs/install-develbase.sh
