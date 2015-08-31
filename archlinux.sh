@@ -150,55 +150,62 @@ fi
 
 mkfs.ext4 ${target_rootfs}
 
-if [ ! -d /tmp/urfs ]
+if [ ! -d /tmp/arfs ]
 then
-  mkdir /tmp/urfs
+  mkdir /tmp/arfs
 fi
-mount -t ext4 ${target_rootfs} /tmp/urfs
+mount -t ext4 ${target_rootfs} /tmp/arfs
 
 tar_file="http://archlinuxarm.org/os/ArchLinuxARM-${archlinux_arch}-${archlinux_version}.tar.gz"
-wget -O - $tar_file | tar xzvvp -C /tmp/urfs/
+wget -O - $tar_file | tar xzvvp -C /tmp/arfs/
 
-mount -o bind /proc /tmp/urfs/proc
-mount -o bind /dev /tmp/urfs/dev
-mount -o bind /dev/pts /tmp/urfs/dev/pts
-mount -o bind /sys /tmp/urfs/sys
+mount -o bind /proc /tmp/arfs/proc
+mount -o bind /dev /tmp/arfs/dev
+mount -o bind /dev/pts /tmp/arfs/dev/pts
+mount -o bind /sys /tmp/arfs/sys
 
 if [ -f /usr/bin/old_bins/cgpt ]
 then
-  cp /usr/bin/old_bins/cgpt /tmp/urfs/usr/bin/
+  cp /usr/bin/old_bins/cgpt /tmp/arfs/usr/bin/
 else
-  cp /usr/bin/cgpt /tmp/urfs/usr/bin/
+  cp /usr/bin/cgpt /tmp/arfs/usr/bin/
 fi
 
-chmod a+rx /tmp/urfs/usr/bin/cgpt
-if [ ! -d /tmp/urfs/run/resolvconf/ ] 
+chmod a+rx /tmp/arfs/usr/bin/cgpt
+if [ ! -d /tmp/arfs/run/resolvconf/ ] 
 then
-  mkdir /tmp/urfs/run/resolvconf/
+  mkdir /tmp/arfs/run/resolvconf/
 fi
-cp /etc/resolv.conf /tmp/urfs/run/resolvconf/
-ln -s -f /run/resolvconf/resolv.conf /tmp/urfs/etc/resolv.conf
-echo alarm > /tmp/urfs/etc/hostname
-echo -e "\n127.0.1.1\tlocalhost.localdomain\tlocalhost\talarm" >> /tmp/urfs/etc/hosts
+cp /etc/resolv.conf /tmp/arfs/run/resolvconf/
+ln -s -f /run/resolvconf/resolv.conf /tmp/arfs/etc/resolv.conf
+echo alarm > /tmp/arfs/etc/hostname
+echo -e "\n127.0.1.1\tlocalhost.localdomain\tlocalhost\talarm" >> /tmp/arfs/etc/hosts
 
 KERN_VER=`uname -r`
-mkdir -p /tmp/urfs/lib/modules/$KERN_VER/
-cp -ar /lib/modules/$KERN_VER/* /tmp/urfs/lib/modules/$KERN_VER/
-if [ ! -d /tmp/urfs/lib/firmware/ ]
+mkdir -p /tmp/arfs/lib/modules/$KERN_VER/
+cp -ar /lib/modules/$KERN_VER/* /tmp/arfs/lib/modules/$KERN_VER/
+if [ ! -d /tmp/arfs/lib/firmware/ ]
 then
-  mkdir /tmp/urfs/lib/firmware/
+  mkdir /tmp/arfs/lib/firmware/
 fi
-cp -ar /lib/firmware/* /tmp/urfs/lib/firmware/
+cp -ar /lib/firmware/* /tmp/arfs/lib/firmware/
 
-cat > /tmp/urfs/install-develbase.sh <<EOF
-pacman -Syy --needed --noconfirm sudo dialog base-devel devtools vim rsync git
+#
+# Add some development tools and put the alarm user into the
+# wheel group. Furthermore, grant ALL privileges via sudo to users
+# that belong to the wheel group
+#
+cat > /tmp/arfs/install-develbase.sh <<EOF
+pacman -Syy --needed --noconfirm sudo wget dialog base-devel devtools vim rsync git
+usermod -aG wheel alarm
+sed 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
 EOF
 
-chmod a+x /tmp/urfs/install-develbase.sh
-chroot /tmp/urfs /bin/bash -c /install-develbase.sh
-rm /tmp/urfs/install-develbase.sh
+chmod a+x /tmp/arfs/install-develbase.sh
+chroot /tmp/arfs /bin/bash -c /install-develbase.sh
+rm /tmp/arfs/install-develbase.sh
 
-cat > /tmp/urfs/install-xbase.sh <<EOF
+cat > /tmp/arfs/install-xbase.sh <<EOF
 pacman -Syy --needed --noconfirm \
         networkmanager network-manager-applet \
         lightdm lightdm-gtk-greeter \
@@ -210,85 +217,66 @@ systemctl enable NetworkManager
 systemctl enable lightdm
 EOF
 
-chmod a+x /tmp/urfs/install-xbase.sh
-chroot /tmp/urfs /bin/bash -c /install-xbase.sh
-rm /tmp/urfs/install-xbase.sh
+chmod a+x /tmp/arfs/install-xbase.sh
+chroot /tmp/arfs /bin/bash -c /install-xbase.sh
+rm /tmp/arfs/install-xbase.sh
 
-cat > /tmp/urfs/install-xfce4.sh <<EOF
+cat > /tmp/arfs/install-xfce4.sh <<EOF
 pacman -Syy --needed --noconfirm  xfce4 xfce4-goodies
 EOF
 
-chmod a+x /tmp/urfs/install-xfce4.sh
-chroot /tmp/urfs /bin/bash -c /install-xfce4.sh
-rm /tmp/urfs/install-xfce4.sh
+chmod a+x /tmp/arfs/install-xfce4.sh
+chroot /tmp/arfs /bin/bash -c /install-xfce4.sh
+rm /tmp/arfs/install-xfce4.sh
 
-cat > /tmp/urfs/install-utils.sh <<EOF
+cat > /tmp/arfs/install-utils.sh <<EOF
 pacman -Syy --needed --noconfirm  sshfs screen file-roller
 EOF
 
-chmod a+x /tmp/urfs/install-utils.sh
-chroot /tmp/urfs /bin/bash -c /install-utils.sh
-rm /tmp/urfs/install-utils.sh
+chmod a+x /tmp/arfs/install-utils.sh
+chroot /tmp/arfs /bin/bash -c /install-utils.sh
+rm /tmp/arfs/install-utils.sh
 
+#
+# Install (latest) proprietary NVIDIA Tegra124 drivers
+#
+# Since the required package is not available through the official
+# repositories (yet), we download the src package from my private
+# homepage and create the pacakge via makepkg ourself.
+#
 
-# copy adobe flash player plugin
-#cp /opt/google/chrome/pepper/libpepflashplayer.so /tmp/urfs/usr/lib/chromium
+cat > /tmp/arfs/install-tegra.sh <<EOF
+cd /tmp
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-R21.4.0-1.src.tar.gz
+sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-R21.4.0-1.src.tar.gz
+cd gpu-nvidia-tegra-k1
+sudo -u nobody -H makepkg
+pacman --needed --noconfirm -U gpu-nvidia-tegra-k1-R21.4.0-1-armv7h.pkg.tar.xz
+cd ..
+rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-R21.4.0-1.src.tar.gz
 
-# tell chromium-browser where to find flash plugin
-#echo -e 'CHROMIUM_FLAGS="${CHROMIUM_FLAGS} --ppapi-flash-path=/usr/lib/chromium/libpepflashplayer.so"' >> /tmp/urfs/etc/chromium/default 
+usermod -aG video alarm
+EOF
+
+chmod a+x /tmp/arfs/install-tegra.sh
+chroot /tmp/arfs /bin/bash -c /install-tegra.sh
+rm /tmp/arfs/install-tegra.sh
+
+cp /etc/X11/xorg.conf.d/tegra.conf /tmp/arfs/usr/share/X11/xorg.conf.d/
 
 # hack for removing uap0 device on startup (avoid freeze)
-echo 'install mwifiex_sdio /sbin/modprobe --ignore-install mwifiex_sdio && sleep 1 && iw dev uap0 del' > /tmp/urfs/etc/modprobe.d/mwifiex.conf 
+echo 'install mwifiex_sdio /sbin/modprobe --ignore-install mwifiex_sdio && sleep 1 && iw dev uap0 del' > /tmp/arfs/etc/modprobe.d/mwifiex.conf 
 
-# BIG specific files here
-cp /etc/X11/xorg.conf.d/tegra.conf /tmp/urfs/usr/share/X11/xorg.conf.d/
-l4tdir=`mktemp -d`
-l4t=Tegra124_Linux_R21.4.0_armhf.tbz2
-wget -P ${l4tdir} http://developer.download.nvidia.com/embedded/L4T/r21_Release_v4.0/${l4t}
-cd ${l4tdir}
-tar xvpf ${l4t}
-cd Linux_for_Tegra/rootfs/
-tar xvpf ../nv_tegra/nvidia_drivers.tbz2
-tar cf - usr/lib | ( cd /tmp/urfs ; tar xvf -)
-
-# cuda symlinks
-ln -s libcuda.so.1 /tmp/urfs/usr/lib/arm-linux-gnueabihf/libcuda.so
-ln -s tegra/libcuda.so.1 /tmp/urfs/usr/lib/arm-linux-gnueabihf/libcuda.so.1
-ln -s tegra/libcuda.so.1.1 /tmp/urfs/usr/lib/arm-linux-gnueabihf/libcuda.so.1.1
-
-echo "/usr/lib/arm-linux-gnueabihf/tegra" > /tmp/urfs/etc/ld.so.conf.d/nvidia-tegra.conf
-echo "/usr/lib/arm-linux-gnueabihf/tegra-egl" > /tmp/urfs/usr/lib/arm-linux-gnueabihf/tegra-egl/ld.so.conf
-echo "/usr/lib/arm-linux-gnueabihf/tegra" > /tmp/urfs/usr/lib/arm-linux-gnueabihf/tegra/ld.so.conf
-
-cat >/tmp/urfs/etc/udev/rules.d/99-tegra-lid-switch.rules <<EOF
+cat >/tmp/arfs/etc/udev/rules.d/99-tegra-lid-switch.rules <<EOF
 ACTION=="remove", GOTO="tegra_lid_switch_end"
 
-SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="platform", KERNELS=="gpio-keys.5", TAG+="power-switch"
+SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="platform", KERNELS=="gpio-keys.4", TAG+="power-switch"
 
 LABEL="tegra_lid_switch_end"
 EOF
 
-# nvidia device node permissions
-cat > /tmp/urfs/lib/udev/rules.d/51-nvrm.rules <<EOF
-KERNEL=="knvmap", GROUP="video", MODE="0660"
-KERNEL=="nvhdcp1", GROUP="video", MODE="0660"
-KERNEL=="nvhost-as-gpu", GROUP="video", MODE="0660"
-KERNEL=="nvhost-ctrl", GROUP="video", MODE="0660"
-KERNEL=="nvhost-ctrl-gpu", GROUP="video", MODE="0660"
-KERNEL=="nvhost-dbg-gpu", GROUP="video", MODE="0660"
-KERNEL=="nvhost-gpu", GROUP="video", MODE="0660"
-KERNEL=="nvhost-msenc", GROUP="video", MODE="0660"
-KERNEL=="nvhost-prof-gpu", GROUP="video", MODE="0660"
-KERNEL=="nvhost-tsec", GROUP="video", MODE="0660"
-KERNEL=="nvhost-vic", GROUP="video", MODE="0660"
-KERNEL=="nvmap", GROUP="video", MODE="0660"
-KERNEL=="tegra_dc_0", GROUP="video", MODE="0660"
-KERNEL=="tegra_dc_1", GROUP="video", MODE="0660"
-KERNEL=="tegra_dc_ctrl", GROUP="video", MODE="0660"
-EOF
-
 # alsa mixer settings to enable internal speakers
-cat > /tmp/urfs/var/lib/alsa/asound.state <<EOF
+cat > /tmp/arfs/var/lib/alsa/asound.state <<EOF
 state.HDATegra {
 	control.1 {
 		iface CARD
@@ -1978,15 +1966,6 @@ state.Venice2 {
 }
 EOF
 
-cat > /tmp/urfs/install-tegra.sh <<EOF
-ldconfig
-usermod -aG video alarm
-EOF
-#su user -c "xdg-settings set default-web-browser chromium.desktop"
-
-chmod a+x /tmp/urfs/install-tegra.sh
-chroot /tmp/urfs /bin/bash -c /install-tegra.sh
-rm /tmp/urfs/install-tegra.sh
 
 echo "console=tty1 debug verbose root=${target_rootfs} rootwait rw lsm.module_locking=0" > kernel-config
 vbutil_arch="arm"
@@ -2014,12 +1993,17 @@ in Chrome OS. If you're happy with ArchLinuxARM when you reboot be sure to run:
 
 sudo cgpt add -i 6 -P 5 -S 1 ${target_disk}
 
-To make it the default boot option. The ChrUbuntu login is:
+To make it the default boot option. The ArchLinuxARM login is:
 
 Username:  alarm
 Password:  alarm
 
-We're now ready to start ChrUbuntu!
+Root access can either be gained via sudo, or the root user:
+
+Username:  root
+Password:  root
+
+We're now ready to start ArchLinuxARM!
 "
 
 read -p "Press [Enter] to reboot..."

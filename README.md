@@ -2,7 +2,9 @@
 
 The archlinux.sh script allows one to install ArchLinuxARM
 (http://www.archlinuxarm.org) on an Acer Chromebook 13 featuring
-the NVIDIA Tegra K1 SoC.
+the NVIDIA Tegra K1 SoC. Instead of just a base system, the script
+installs an entire xfce4 system, so it is kind of similar to what
+a Xubuntu distribution would look like.
 
 The script itself is derived from the work Clifford Wolf's chrubuntu
 script, which can be found here:
@@ -16,7 +18,7 @@ the instructions at the end of the installer script to set your own
 boot default priorities.
 
 Unfortunately, the ChromeOS kernel that resides in the ChromeOS partitions
-doesn't support all features necessary a properly working ArchLinux System.
+doesn't support all features necessary for a properly working ArchLinux System.
 It lacks some of the required kernel configs for systemd. However, the
 ChromeOS kernel can still be used to boot the ArchLinuxARM system, which
 helps a lot for an initial setup. To solve the problem with the missing
@@ -36,8 +38,9 @@ problems yet, except that 'Suspend to RAM' is not working (yet).
 
 
 ### Preparation
-This script installs a basic ubuntu system and also the NVidia drivers
-the Tegra K1 processor and its Kepler GPU.
+This script installs an ArchLinuxARM system, together with an xfce4/xorg
+environment, including the proprietary NVidia drivers for the Tegra K1
+processor and its Kepler GPU.
 
 => Reinstall Chrome OS in Developer Mode
 
@@ -64,7 +67,7 @@ window. Enter the following commands:
 	wget https://raw.githubusercontent.com/RaumZeit/LinuxOnAcerCB5-311/archlinux/archlinux.sh
 	sudo bash archlinux.sh
 
-This will ask you how much space you would like to reserve for ArchLinuxARMU. I chose
+This will ask you how much space you would like to reserve for ArchLinuxARM. I chose
 16 GB. After changing the partition table the script will reboot the device.
 The boot loader will then recreate the chrome os partition used for user
 content on the smaller partition, leaving the newly created partition for
@@ -84,5 +87,17 @@ window. Enter the following commands:
 This time the script auto-detects that the target partition already exists and
 installs alarm.
 
+### Usage
+After a successful installation, use the following login:
+
+	Username:  alarm
+	Password:  alarm
+
+Root access can either be gained via sudo, or the root user:
+
+	Username:  root
+	Password:  root
+
+Remember to change the default passwords of both accounts, alarm AND root!
 
 Copyright (c) 2015, 2015 Ronny Lorenz <ronny@tbi.univie.ac.at>
