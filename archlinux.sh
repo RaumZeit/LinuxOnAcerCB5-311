@@ -246,8 +246,11 @@ EOF
 cat > /tmp/arfs/install-xfce4.sh <<EOF
 pacman -Syy --needed --noconfirm  xfce4 xfce4-goodies
 # copy .xinitrc to already existing home of user 'alarm'
-cp /etc/skel/.xinitrc /home/alarm/
+cp /etc/skel/.xinitrc /home/alarm/.xinitrc
+cp /etc/skel/.xinitrc /home/alarm/.xprofile
+sed -i 's/exec startxfce4/# exec startxfce4/' /home/alarm/.xprofile
 chown alarm:users /home/alarm/.xinitrc
+chown alarm:users /home/alarm/.xprofile
 EOF
 
 chmod a+x /tmp/arfs/install-xfce4.sh
