@@ -100,4 +100,15 @@ Root access can either be gained via sudo, or the root user:
 
 Remember to change the default passwords of both accounts, alarm AND root!
 
+### Post Scriptum
+Please note, that currently the chromium browser package available through the
+ArchLinux ARM repositories fails to run on many ARM platforms. This is due to some
+GCC 5.2 compilation issues that affects other programs as well. To find a
+possible fix for this problem is right now under investigation by the
+ArchLinux ARM developers.
+As long as there is no fixed package available, please refer to the following
+forum topic for a working chromium browser package (compiled with GCC 5.1):
+
+http://archlinuxarm.org/forum/viewtopic.php?f=60&t=9109&start=10#p48213
+
 Copyright (c) 2015, 2015 Ronny Lorenz <ronny@tbi.univie.ac.at>
