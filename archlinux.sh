@@ -211,6 +211,7 @@ pacman -Syy --needed --noconfirm \
         lightdm lightdm-gtk-greeter \
         chromium chromium-pepper-flash \
         xorg-server xorg-server-utils xorg-apps xf86-input-synaptics \
+        xorg-twm xorg-xclock xterm xorg-xinit xorg-utils \
         alsa-lib alsa-utils alsa-tools alsa-oss alsa-firmware alsa-plugins \
         pulseaudio pulseaudio-alsa
 systemctl enable NetworkManager
@@ -221,8 +222,32 @@ chmod a+x /tmp/arfs/install-xbase.sh
 chroot /tmp/arfs /bin/bash -c /install-xbase.sh
 rm /tmp/arfs/install-xbase.sh
 
+# add .xinitrc to /etc/skel that defaults to xfce4 session
+cat > /tmp/arfs/etc/skel/.xinitrc <<EOF
+#!/bin/sh
+#
+# ~/.xinitrc
+#
+# Executed by startx (run your window manager from here)
+
+if [ -d /etc/X11/xinit/xinitrc.d ]; then
+  for f in /etc/X11/xinit/xinitrc.d/*; do
+    [ -x "$f" ] && . "$f"
+  done
+  unset f
+fi
+
+# exec gnome-session
+# exec startkde
+exec startxfce4
+# ...or the Window Manager of your choice
+EOF
+
 cat > /tmp/arfs/install-xfce4.sh <<EOF
 pacman -Syy --needed --noconfirm  xfce4 xfce4-goodies
+# copy .xinitrc to already existing home of user 'alarm'
+cp /etc/skel/.xinitrc /home/alarm/
+chown alarm:users /home/alarm/.xinitrc
 EOF
 
 chmod a+x /tmp/arfs/install-xfce4.sh
