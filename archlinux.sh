@@ -207,58 +207,12 @@ chmod a+x /tmp/arfs/install-develbase.sh
 chroot /tmp/arfs /bin/bash -c /install-develbase.sh
 rm /tmp/arfs/install-develbase.sh
 
-
-#
-# Meanwhile, ArchLinuxARM repo contains xorg-server >= 1.18 which
-# is incompatible with the proprietary NVIDIA drivers
-# Thus, we install xorg-server 1.17 and required input device
-# drivers from source package
-#
-# We also put the xorg group and xf86-input-evdev into
-# pacman's IgnorePkg/IgnoreGroup
-#
-cat > /tmp/arfs/install-xorg-ABI-19.sh <<EOF
-cd /tmp
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xorg-server-1.17.4-2.src.tar.gz
-sudo -u nobody -H tar xzf xorg-server-1.17.4-2.src.tar.gz
-cd xorg-server
-sudo -u nobody -H makepkg -s -A --skippgpcheck
-cd ..
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-evdev-2.9.2-1.src.tar.gz
-sudo -u nobody -H tar xzf xf86-input-evdev-2.9.2-1.src.tar.gz
-cd xf86-input-evdev
-sudo -u nobody -H makepkg -s -A --skippgpcheck
-cd ..
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-synaptics-1.8.2-2.src.tar.gz
-sudo -u nobody -H tar xzf xf86-input-synaptics-1.8.2-2.src.tar.gz
-cd xf86-input-synaptics
-sudo -u nobody -H makepkg -s -A
-cd ..
-
-yes | pacman --needed -U  xorg-server/xorg-server-1.17.4-2-armv7h.pkg.tar.xz \
-                          xf86-input-evdev/xf86-input-evdev-2.9.2-1-armv7h.pkg.tar.xz \
-                          xf86-input-synaptics/xf86-input-synaptics-1.8.2-2-armv7h.pkg.tar.xz
-
-rm -rf  xorg-server xorg-server-1.17.4-2.src.tar.gz \
-        xf86-input-evdev xf86-input-evdev-2.9.2-1.src.tar.gz \
-        xf86-input-synaptics xf86-input-synaptics-1.8.2-2.src.tar.gz
-
-sed -i 's/#IgnorePkg   =/IgnorePkg   = xf86-input-evdev xf86-input-synaptics/' /etc/pacman.conf
-sed -i 's/#IgnoreGroup =/IgnoreGroup = xorg/' /etc/pacman.conf
-
-EOF
-
-chmod a+x /tmp/arfs/install-xorg-ABI-19.sh
-chroot /tmp/arfs /bin/bash -c /install-xorg-ABI-19.sh
-rm /tmp/arfs/install-xorg-ABI-19.sh
-
-
 cat > /tmp/arfs/install-xbase.sh <<EOF
 pacman -Syy --needed --noconfirm \
         iw networkmanager network-manager-applet \
         lightdm lightdm-gtk-greeter \
         chromium chromium-pepper-flash \
-        xorg-server-utils xorg-apps \
+        xorg-server xorg-server-utils xorg-apps xf86-input-synaptics \
         xorg-twm xorg-xclock xterm xorg-xinit xorg-utils \
         alsa-lib alsa-utils alsa-tools alsa-oss alsa-firmware alsa-plugins \
         pulseaudio pulseaudio-alsa
@@ -269,6 +223,61 @@ EOF
 chmod a+x /tmp/arfs/install-xbase.sh
 chroot /tmp/arfs /bin/bash -c /install-xbase.sh
 rm /tmp/arfs/install-xbase.sh
+
+
+
+#
+# Meanwhile, ArchLinuxARM repo contains xorg-server >= 1.18 which
+# is incompatible with the proprietary NVIDIA drivers
+# Thus, we downgrade to xorg-server 1.17 and required input device
+# drivers from source package
+#
+# We also put the xorg-server and xf86-input-evdev/xf86-input-synaptics into
+# pacman's IgnorePkg
+#
+cat > /tmp/arfs/install-xorg-ABI-19.sh <<EOF
+cd /tmp
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xorg-server-1.17.2-4-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xorg-server-common-1.17.2-4-armv7h.pkg.tar.xz
+#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xorg-server-1.17.4-2.src.tar.gz
+#sudo -u nobody -H tar xzf xorg-server-1.17.4-2.src.tar.gz
+#cd xorg-server
+#sudo -u nobody -H makepkg -A --skippgpcheck
+#cd ..
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-evdev-2.9.2-1-armv7h.pkg.tar.xz
+#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-evdev-2.9.2-1.src.tar.gz
+#sudo -u nobody -H tar xzf xf86-input-evdev-2.9.2-1.src.tar.gz
+#cd xf86-input-evdev
+#sudo -u nobody -H makepkg -s -A --skippgpcheck
+#cd ..
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-synaptics-1.8.2-2-armv7h.pkg.tar.xz
+#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-synaptics-1.8.2-2.src.tar.gz
+#sudo -u nobody -H tar xzf xf86-input-synaptics-1.8.2-2.src.tar.gz
+#cd xf86-input-synaptics
+#sudo -u nobody -H makepkg -s -A
+#cd ..
+
+yes | pacman --needed -U  xorg-server-1.17.2-4-armv7h.pkg.tar.xz \
+                          xorg-server-common-1.17.2-4-armv7h.pkg.tar.xz \
+                          xf86-input-evdev-2.9.2-1-armv7h.pkg.tar.xz \
+                          xf86-input-synaptics-1.8.2-2-armv7h.pkg.tar.xz
+#yes | pacman --needed -U  xorg-server/xorg-server-1.17.4-2-armv7h.pkg.tar.xz \
+#                          xf86-input-evdev/xf86-input-evdev-2.9.2-1-armv7h.pkg.tar.xz \
+#                          xf86-input-synaptics/xf86-input-synaptics-1.8.2-2-armv7h.pkg.tar.xz
+
+#rm -rf  xorg-server xorg-server-1.17.4-2.src.tar.gz \
+#        xf86-input-evdev xf86-input-evdev-2.9.2-1.src.tar.gz \
+#        xf86-input-synaptics xf86-input-synaptics-1.8.2-2.src.tar.gz
+
+sed -i 's/#IgnorePkg   =/IgnorePkg   = xorg-server xorg-server-common xf86-input-evdev xf86-input-synaptics/' /etc/pacman.conf
+
+EOF
+
+chmod a+x /tmp/arfs/install-xorg-ABI-19.sh
+chroot /tmp/arfs /bin/bash -c /install-xorg-ABI-19.sh
+rm /tmp/arfs/install-xorg-ABI-19.sh
+
+
 
 # add .xinitrc to /etc/skel that defaults to xfce4 session
 cat > /tmp/arfs/etc/skel/.xinitrc <<EOF
