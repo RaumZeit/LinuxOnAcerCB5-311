@@ -330,15 +330,36 @@ rm /tmp/arfs/install-utils.sh
 # homepage and create the pacakge via makepkg ourself.
 #
 
+#cat > /tmp/arfs/install-tegra.sh <<EOF
+#cd /tmp
+#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
+#sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
+#cd gpu-nvidia-tegra-k1
+#sudo -u nobody -H makepkg
+#yes | pacman --needed -U gpu-nvidia-tegra-k1-*-21.4.0-4.1-armv7h.pkg.tar.xz
+#cd ..
+#rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
+#
+#usermod -aG video alarm
+#EOF
+#
+#chmod a+x /tmp/arfs/install-tegra.sh
+#chroot /tmp/arfs /bin/bash -c /install-tegra.sh
+#rm /tmp/arfs/install-tegra.sh
+
 cat > /tmp/arfs/install-tegra.sh <<EOF
 cd /tmp
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
-sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
-cd gpu-nvidia-tegra-k1
-sudo -u nobody -H makepkg
-yes | pacman --needed -U gpu-nvidia-tegra-k1-*-21.4.0-4.1-armv7h.pkg.tar.xz
-cd ..
-rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz
+
+yes | pacman --needed -U  gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz \
+                          gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz \
+                          gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz \
+                          gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz \
+                          gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz
 
 usermod -aG video alarm
 EOF
@@ -346,6 +367,7 @@ EOF
 chmod a+x /tmp/arfs/install-tegra.sh
 chroot /tmp/arfs /bin/bash -c /install-tegra.sh
 rm /tmp/arfs/install-tegra.sh
+
 
 cp /etc/X11/xorg.conf.d/tegra.conf /tmp/arfs/usr/share/X11/xorg.conf.d/
 
