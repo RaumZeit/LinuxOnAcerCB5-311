@@ -332,13 +332,13 @@ rm /tmp/arfs/install-utils.sh
 
 cat > /tmp/arfs/install-tegra.sh <<EOF
 cd /tmp
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-21.4.0-4.src.tar.gz
-sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-21.4.0-4.src.tar.gz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
+sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
 cd gpu-nvidia-tegra-k1
 sudo -u nobody -H makepkg
-yes | pacman --needed -U gpu-nvidia-tegra-k1-*-21.4.0-4-armv7h.pkg.tar.xz
+yes | pacman --needed -U gpu-nvidia-tegra-k1-*-21.4.0-4.1-armv7h.pkg.tar.xz
 cd ..
-rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-21.4.0-4.src.tar.gz
+rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
 
 usermod -aG video alarm
 EOF
@@ -2071,7 +2071,7 @@ cat > /tmp/arfs/install-kernel.sh <<EOF
 cd /tmp
 sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/linux-nyan-3.10.18-8-armv7h.pkg.tar.xz
 sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/linux-nyan-headers-3.10.18-8-armv7h.pkg.tar.xz
-pacman --needed -U  linux-nyan-3.10.18-8-armv7h.pkg.tar.xz linux-nyan-headers-3.10.18-8-armv7h.pkg.tar.xz
+yes | pacman --needed -U  linux-nyan-3.10.18-8-armv7h.pkg.tar.xz linux-nyan-headers-3.10.18-8-armv7h.pkg.tar.xz
 
 EOF
 
