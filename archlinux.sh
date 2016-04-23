@@ -31,19 +31,23 @@ if [ "$1" != "" ]; then
   echo ""
   read -p "Press [Enter] to install ArchLinuxARM on ${target_disk} or CTRL+C to quit"
 
+  kern_part=1
+  root_part=2
   ext_size="`blockdev --getsz ${target_disk}`"
   aroot_size=$((ext_size - 65600 - 33))
   cgpt create ${target_disk} 
-  cgpt add -i 6 -b 64 -s 32768 -S 1 -P 5 -l KERN-A -t "kernel" ${target_disk}
-  cgpt add -i 7 -b 65600 -s $aroot_size -l ROOT-A -t "rootfs" ${target_disk}
+  cgpt add -i ${kern_part} -b 64 -s 32768 -S 1 -P 5 -l KERN-A -t "kernel" ${target_disk}
+  cgpt add -i ${root_part} -b 65600 -s $aroot_size -l ROOT-A -t "rootfs" ${target_disk}
   sync
   blockdev --rereadpt ${target_disk}
   crossystem dev_boot_usb=1
 else
   target_disk="`rootdev -d -s`"
+  kern_part=6
+  root_part=7
   # Do partitioning (if we haven't already)
-  ckern_size="`cgpt show -i 6 -n -s -q ${target_disk}`"
-  croot_size="`cgpt show -i 7 -n -s -q ${target_disk}`"
+  ckern_size="`cgpt show -i ${kern_part} -n -s -q ${target_disk}`"
+  croot_size="`cgpt show -i ${root_part} -n -s -q ${target_disk}`"
   state_size="`cgpt show -i 1 -n -s -q ${target_disk}`"
 
   max_archlinux_size=$(($state_size/1024/1024/2))
@@ -97,10 +101,10 @@ else
     cgpt add -i 1 -b $stateful_start -s $stateful_size -l STATE ${target_disk}
 
     # now kernc
-    cgpt add -i 6 -b $kernc_start -s $kernc_size -l KERN-C ${target_disk}
+    cgpt add -i ${kern_part} -b $kernc_start -s $kernc_size -l KERN-C ${target_disk}
 
     # finally rootc
-    cgpt add -i 7 -b $rootc_start -s $rootc_size -l ROOT-C ${target_disk}
+    cgpt add -i ${root_part} -b $rootc_start -s $rootc_size -l ROOT-C ${target_disk}
 
     reboot
     exit
@@ -131,11 +135,11 @@ cd /mnt/stateful_partition/archlinux
 
 if [[ "${target_disk}" =~ "mmcblk" ]]
 then
-  target_rootfs="${target_disk}p7"
-  target_kern="${target_disk}p6"
+  target_rootfs="${target_disk}p${root_part}"
+  target_kern="${target_disk}p${kern_part}"
 else
-  target_rootfs="${target_disk}7"
-  target_kern="${target_disk}6"
+  target_rootfs="${target_disk}${root_part}"
+  target_kern="${target_disk}${kern_part}"
 fi
 
 echo "Target Kernel Partition: $target_kern  Target Root FS: ${target_rootfs}"
@@ -2054,7 +2058,7 @@ vbutil_kernel --repack ${target_kern} \
     --arch arm
 
 #Set ArchLinuxARM kernel partition as top priority for next boot (and next boot only)
-cgpt add -i 6 -P 5 -T 1 ${target_disk}
+cgpt add -i ${kern_part} -P 5 -T 1 ${target_disk}
 
 echo -e "
 
@@ -2062,7 +2066,7 @@ Installation seems to be complete. If ArchLinux fails when you reboot,
 power off your Chrome OS device and then turn it back on. You'll be back
 in Chrome OS. If you're happy with ArchLinuxARM when you reboot be sure to run:
 
-sudo cgpt add -i 6 -P 5 -S 1 ${target_disk}
+sudo cgpt add -i ${kern_part} -P 5 -S 1 ${target_disk}
 
 To make it the default boot option. The ArchLinuxARM login is:
 
