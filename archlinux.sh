@@ -23,23 +23,21 @@ fi
 
 #setterm -blank 0
 
-if [ "$3" != "" ]; then
-  target_disk=$3
+if [ "$1" != "" ]; then
+  target_disk=$1
   echo "Got ${target_disk} as target drive"
   echo ""
   echo "WARNING! All data on this device will be wiped out! Continue at your own risk!"
   echo ""
-  read -p "Press [Enter] to install ChrUbuntu on ${target_disk} or CTRL+C to quit"
+  read -p "Press [Enter] to install ArchLinuxARM on ${target_disk} or CTRL+C to quit"
 
   ext_size="`blockdev --getsz ${target_disk}`"
   aroot_size=$((ext_size - 65600 - 33))
-  parted --script ${target_disk} "mktable gpt"
   cgpt create ${target_disk} 
   cgpt add -i 6 -b 64 -s 32768 -S 1 -P 5 -l KERN-A -t "kernel" ${target_disk}
   cgpt add -i 7 -b 65600 -s $aroot_size -l ROOT-A -t "rootfs" ${target_disk}
   sync
   blockdev --rereadpt ${target_disk}
-  partprobe ${target_disk}
   crossystem dev_boot_usb=1
 else
   target_disk="`rootdev -d -s`"
@@ -2042,7 +2040,6 @@ EOF
 
 
 echo "console=tty1 debug verbose root=${target_rootfs} rootwait rw lsm.module_locking=0" > kernel-config
-vbutil_arch="arm"
 
 current_rootfs="`rootdev -s`"
 current_kernfs_num=$((${current_rootfs: -1:1}-1))
@@ -2054,9 +2051,9 @@ vbutil_kernel --repack ${target_kern} \
     --version 1 \
     --signprivate /usr/share/vboot/devkeys/kernel_data_key.vbprivk \
     --config kernel-config \
-    --arch $vbutil_arch
+    --arch arm
 
-#Set Ubuntu kernel partition as top priority for next boot (and next boot only)
+#Set ArchLinuxARM kernel partition as top priority for next boot (and next boot only)
 cgpt add -i 6 -P 5 -T 1 ${target_disk}
 
 echo -e "
