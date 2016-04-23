@@ -322,65 +322,6 @@ chmod a+x /tmp/arfs/install-utils.sh
 chroot /tmp/arfs /bin/bash -c /install-utils.sh
 rm /tmp/arfs/install-utils.sh
 
-#
-# Install (latest) proprietary NVIDIA Tegra124 drivers
-#
-# Since the required package is not available through the official
-# repositories (yet), we download the src package from my private
-# homepage and create the pacakge via makepkg ourself.
-#
-
-#cat > /tmp/arfs/install-tegra.sh <<EOF
-#cd /tmp
-#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
-#sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
-#cd gpu-nvidia-tegra-k1
-#sudo -u nobody -H makepkg
-#yes | pacman --needed -U gpu-nvidia-tegra-k1-*-21.4.0-4.1-armv7h.pkg.tar.xz
-#cd ..
-#rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
-#
-#usermod -aG video alarm
-#EOF
-#
-#chmod a+x /tmp/arfs/install-tegra.sh
-#chroot /tmp/arfs /bin/bash -c /install-tegra.sh
-#rm /tmp/arfs/install-tegra.sh
-
-cat > /tmp/arfs/install-tegra.sh <<EOF
-cd /tmp
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz
-
-yes | pacman --needed -U  gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz \
-                          gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz \
-                          gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz \
-                          gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz \
-                          gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz
-
-usermod -aG video alarm
-EOF
-
-chmod a+x /tmp/arfs/install-tegra.sh
-chroot /tmp/arfs /bin/bash -c /install-tegra.sh
-rm /tmp/arfs/install-tegra.sh
-
-
-cp /etc/X11/xorg.conf.d/tegra.conf /tmp/arfs/usr/share/X11/xorg.conf.d/
-
-# hack for removing uap0 device on startup (avoid freeze)
-echo 'install mwifiex_sdio /sbin/modprobe --ignore-install mwifiex_sdio && sleep 1 && iw dev uap0 del' > /tmp/arfs/etc/modprobe.d/mwifiex.conf 
-
-cat >/tmp/arfs/etc/udev/rules.d/99-tegra-lid-switch.rules <<EOF
-ACTION=="remove", GOTO="tegra_lid_switch_end"
-
-SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="platform", KERNELS=="gpio-keys.4", TAG+="power-switch"
-
-LABEL="tegra_lid_switch_end"
-EOF
 
 # alsa mixer settings to enable internal speakers
 cat > /tmp/arfs/var/lib/alsa/asound.state <<EOF
@@ -2100,6 +2041,66 @@ EOF
 chmod a+x /tmp/arfs/install-kernel.sh
 chroot /tmp/arfs /bin/bash -c /install-kernel.sh
 rm /tmp/arfs/install-kernel.sh
+
+#
+# Install (latest) proprietary NVIDIA Tegra124 drivers
+#
+# Since the required package is not available through the official
+# repositories (yet), we download the src package from my private
+# homepage and create the pacakge via makepkg ourself.
+#
+
+#cat > /tmp/arfs/install-tegra.sh <<EOF
+#cd /tmp
+#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
+#sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
+#cd gpu-nvidia-tegra-k1
+#sudo -u nobody -H makepkg
+#yes | pacman --needed -U gpu-nvidia-tegra-k1-*-21.4.0-4.1-armv7h.pkg.tar.xz
+#cd ..
+#rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
+#
+#usermod -aG video alarm
+#EOF
+#
+#chmod a+x /tmp/arfs/install-tegra.sh
+#chroot /tmp/arfs /bin/bash -c /install-tegra.sh
+#rm /tmp/arfs/install-tegra.sh
+
+cat > /tmp/arfs/install-tegra.sh <<EOF
+cd /tmp
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz
+
+yes | pacman --needed -U  gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz \
+                          gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz \
+                          gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz \
+                          gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz \
+                          gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz
+
+usermod -aG video alarm
+EOF
+
+chmod a+x /tmp/arfs/install-tegra.sh
+chroot /tmp/arfs /bin/bash -c /install-tegra.sh
+rm /tmp/arfs/install-tegra.sh
+
+
+cp /etc/X11/xorg.conf.d/tegra.conf /tmp/arfs/usr/share/X11/xorg.conf.d/
+
+# hack for removing uap0 device on startup (avoid freeze)
+echo 'install mwifiex_sdio /sbin/modprobe --ignore-install mwifiex_sdio && sleep 1 && iw dev uap0 del' > /tmp/arfs/etc/modprobe.d/mwifiex.conf 
+
+cat >/tmp/arfs/etc/udev/rules.d/99-tegra-lid-switch.rules <<EOF
+ACTION=="remove", GOTO="tegra_lid_switch_end"
+
+SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="platform", KERNELS=="gpio-keys.4", TAG+="power-switch"
+
+LABEL="tegra_lid_switch_end"
+EOF
 
 
 #Set ArchLinuxARM kernel partition as top priority for next boot (and next boot only)
