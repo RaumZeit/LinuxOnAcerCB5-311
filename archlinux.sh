@@ -2075,7 +2075,8 @@ sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-op
 sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz
 sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz
 
-yes | pacman --needed -U  gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz \
+yes | pacman --needed -U  --force \
+                          gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz \
                           gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz \
                           gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz \
                           gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz \
