@@ -332,13 +332,13 @@ rm /tmp/arfs/install-utils.sh
 
 cat > /tmp/arfs/install-tegra.sh <<EOF
 cd /tmp
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-R21.4.0-4.src.tar.gz
-sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-R21.4.0-4.src.tar.gz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-21.4.0-4.src.tar.gz
+sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-21.4.0-4.src.tar.gz
 cd gpu-nvidia-tegra-k1
 sudo -u nobody -H makepkg
-yes | pacman --needed -U gpu-nvidia-tegra-k1-*-R21.4.0-4-armv7h.pkg.tar.xz
+yes | pacman --needed -U gpu-nvidia-tegra-k1-*-21.4.0-4-armv7h.pkg.tar.xz
 cd ..
-rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-R21.4.0-4.src.tar.gz
+rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-21.4.0-4.src.tar.gz
 
 usermod -aG video alarm
 EOF
@@ -2052,19 +2052,33 @@ state.Venice2 {
 EOF
 
 
-echo "console=tty1 debug verbose root=${target_rootfs} rootwait rw lsm.module_locking=0" > kernel-config
+#echo "console=tty1 debug verbose root=${target_rootfs} rootwait rw lsm.module_locking=0" > kernel-config
+#
+#current_rootfs="`rootdev -s`"
+#current_kernfs_num=$((${current_rootfs: -1:1}-1))
+#current_kernfs=${current_rootfs: 0:-1}$current_kernfs_num
+#
+#vbutil_kernel --repack ${target_kern} \
+#    --oldblob $current_kernfs \
+#    --keyblock /usr/share/vboot/devkeys/kernel.keyblock \
+#    --version 1 \
+#    --signprivate /usr/share/vboot/devkeys/kernel_data_key.vbprivk \
+#    --config kernel-config \
+#    --arch arm
+#
 
-current_rootfs="`rootdev -s`"
-current_kernfs_num=$((${current_rootfs: -1:1}-1))
-current_kernfs=${current_rootfs: 0:-1}$current_kernfs_num
+cat > /tmp/arfs/install-kernel.sh <<EOF
+cd /tmp
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/linux-nyan-3.10.18-8-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/linux-nyan-headers-3.10.18-8-armv7h.pkg.tar.xz
+pacman --needed -U  linux-nyan-3.10.18-8-armv7h.pkg.tar.xz linux-nyan-headers-3.10.18-8-armv7h.pkg.tar.xz
 
-vbutil_kernel --repack ${target_kern} \
-    --oldblob $current_kernfs \
-    --keyblock /usr/share/vboot/devkeys/kernel.keyblock \
-    --version 1 \
-    --signprivate /usr/share/vboot/devkeys/kernel_data_key.vbprivk \
-    --config kernel-config \
-    --arch arm
+EOF
+
+chmod a+x /tmp/arfs/install-kernel.sh
+chroot /tmp/arfs /bin/bash -c /install-kernel.sh
+rm /tmp/arfs/install-kernel.sh
+
 
 #Set ArchLinuxARM kernel partition as top priority for next boot (and next boot only)
 cgpt add -i ${kern_part} -P 5 -T 1 ${target_disk}
