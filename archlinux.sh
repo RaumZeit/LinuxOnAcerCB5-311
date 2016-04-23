@@ -23,29 +23,31 @@ fi
 
 #setterm -blank 0
 
-if [ "$3" != "" ]; then
-  target_disk=$3
+if [ "$1" != "" ]; then
+  target_disk=$1
   echo "Got ${target_disk} as target drive"
   echo ""
   echo "WARNING! All data on this device will be wiped out! Continue at your own risk!"
   echo ""
-  read -p "Press [Enter] to install ChrUbuntu on ${target_disk} or CTRL+C to quit"
+  read -p "Press [Enter] to install ArchLinuxARM on ${target_disk} or CTRL+C to quit"
 
+  kern_part=1
+  root_part=2
   ext_size="`blockdev --getsz ${target_disk}`"
   aroot_size=$((ext_size - 65600 - 33))
-  parted --script ${target_disk} "mktable gpt"
   cgpt create ${target_disk} 
-  cgpt add -i 6 -b 64 -s 32768 -S 1 -P 5 -l KERN-A -t "kernel" ${target_disk}
-  cgpt add -i 7 -b 65600 -s $aroot_size -l ROOT-A -t "rootfs" ${target_disk}
+  cgpt add -i ${kern_part} -b 64 -s 32768 -S 1 -P 5 -l KERN-A -t "kernel" ${target_disk}
+  cgpt add -i ${root_part} -b 65600 -s $aroot_size -l ROOT-A -t "rootfs" ${target_disk}
   sync
   blockdev --rereadpt ${target_disk}
-  partprobe ${target_disk}
   crossystem dev_boot_usb=1
 else
   target_disk="`rootdev -d -s`"
+  kern_part=6
+  root_part=7
   # Do partitioning (if we haven't already)
-  ckern_size="`cgpt show -i 6 -n -s -q ${target_disk}`"
-  croot_size="`cgpt show -i 7 -n -s -q ${target_disk}`"
+  ckern_size="`cgpt show -i ${kern_part} -n -s -q ${target_disk}`"
+  croot_size="`cgpt show -i ${root_part} -n -s -q ${target_disk}`"
   state_size="`cgpt show -i 1 -n -s -q ${target_disk}`"
 
   max_archlinux_size=$(($state_size/1024/1024/2))
@@ -99,10 +101,10 @@ else
     cgpt add -i 1 -b $stateful_start -s $stateful_size -l STATE ${target_disk}
 
     # now kernc
-    cgpt add -i 6 -b $kernc_start -s $kernc_size -l KERN-C ${target_disk}
+    cgpt add -i ${kern_part} -b $kernc_start -s $kernc_size -l KERN-C ${target_disk}
 
     # finally rootc
-    cgpt add -i 7 -b $rootc_start -s $rootc_size -l ROOT-C ${target_disk}
+    cgpt add -i ${root_part} -b $rootc_start -s $rootc_size -l ROOT-C ${target_disk}
 
     reboot
     exit
@@ -133,11 +135,11 @@ cd /mnt/stateful_partition/archlinux
 
 if [[ "${target_disk}" =~ "mmcblk" ]]
 then
-  target_rootfs="${target_disk}p7"
-  target_kern="${target_disk}p6"
+  target_rootfs="${target_disk}p${root_part}"
+  target_kern="${target_disk}p${kern_part}"
 else
-  target_rootfs="${target_disk}7"
-  target_kern="${target_disk}6"
+  target_rootfs="${target_disk}${root_part}"
+  target_kern="${target_disk}${kern_part}"
 fi
 
 echo "Target Kernel Partition: $target_kern  Target Root FS: ${target_rootfs}"
@@ -222,6 +224,61 @@ chmod a+x /tmp/arfs/install-xbase.sh
 chroot /tmp/arfs /bin/bash -c /install-xbase.sh
 rm /tmp/arfs/install-xbase.sh
 
+
+
+#
+# Meanwhile, ArchLinuxARM repo contains xorg-server >= 1.18 which
+# is incompatible with the proprietary NVIDIA drivers
+# Thus, we downgrade to xorg-server 1.17 and required input device
+# drivers from source package
+#
+# We also put the xorg-server and xf86-input-evdev/xf86-input-synaptics into
+# pacman's IgnorePkg
+#
+cat > /tmp/arfs/install-xorg-ABI-19.sh <<EOF
+cd /tmp
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xorg-server-1.17.2-4-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xorg-server-common-1.17.2-4-armv7h.pkg.tar.xz
+#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xorg-server-1.17.4-2.src.tar.gz
+#sudo -u nobody -H tar xzf xorg-server-1.17.4-2.src.tar.gz
+#cd xorg-server
+#sudo -u nobody -H makepkg -A --skippgpcheck
+#cd ..
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-evdev-2.9.2-1-armv7h.pkg.tar.xz
+#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-evdev-2.9.2-1.src.tar.gz
+#sudo -u nobody -H tar xzf xf86-input-evdev-2.9.2-1.src.tar.gz
+#cd xf86-input-evdev
+#sudo -u nobody -H makepkg -s -A --skippgpcheck
+#cd ..
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-synaptics-1.8.2-2-armv7h.pkg.tar.xz
+#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-synaptics-1.8.2-2.src.tar.gz
+#sudo -u nobody -H tar xzf xf86-input-synaptics-1.8.2-2.src.tar.gz
+#cd xf86-input-synaptics
+#sudo -u nobody -H makepkg -s -A
+#cd ..
+
+yes | pacman --needed -U  xorg-server-1.17.2-4-armv7h.pkg.tar.xz \
+                          xorg-server-common-1.17.2-4-armv7h.pkg.tar.xz \
+                          xf86-input-evdev-2.9.2-1-armv7h.pkg.tar.xz \
+                          xf86-input-synaptics-1.8.2-2-armv7h.pkg.tar.xz
+#yes | pacman --needed -U  xorg-server/xorg-server-1.17.4-2-armv7h.pkg.tar.xz \
+#                          xf86-input-evdev/xf86-input-evdev-2.9.2-1-armv7h.pkg.tar.xz \
+#                          xf86-input-synaptics/xf86-input-synaptics-1.8.2-2-armv7h.pkg.tar.xz
+
+#rm -rf  xorg-server xorg-server-1.17.4-2.src.tar.gz \
+#        xf86-input-evdev xf86-input-evdev-2.9.2-1.src.tar.gz \
+#        xf86-input-synaptics xf86-input-synaptics-1.8.2-2.src.tar.gz
+
+sed -i 's/#IgnorePkg   =/IgnorePkg   = xorg-server xorg-server-common xf86-input-evdev xf86-input-synaptics/' /etc/pacman.conf
+
+EOF
+
+chmod a+x /tmp/arfs/install-xorg-ABI-19.sh
+chroot /tmp/arfs /bin/bash -c /install-xorg-ABI-19.sh
+rm /tmp/arfs/install-xorg-ABI-19.sh
+
+
+
 # add .xinitrc to /etc/skel that defaults to xfce4 session
 cat > /tmp/arfs/etc/skel/.xinitrc <<EOF
 #!/bin/sh
@@ -265,43 +322,6 @@ chmod a+x /tmp/arfs/install-utils.sh
 chroot /tmp/arfs /bin/bash -c /install-utils.sh
 rm /tmp/arfs/install-utils.sh
 
-#
-# Install (latest) proprietary NVIDIA Tegra124 drivers
-#
-# Since the required package is not available through the official
-# repositories (yet), we download the src package from my private
-# homepage and create the pacakge via makepkg ourself.
-#
-
-cat > /tmp/arfs/install-tegra.sh <<EOF
-cd /tmp
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-R21.4.0-2.src.tar.gz
-sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-R21.4.0-2.src.tar.gz
-cd gpu-nvidia-tegra-k1
-sudo -u nobody -H makepkg
-yes | pacman --needed -U gpu-nvidia-tegra-k1-R21.4.0-2-armv7h.pkg.tar.xz
-cd ..
-rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-R21.4.0-2.src.tar.gz
-
-usermod -aG video alarm
-EOF
-
-chmod a+x /tmp/arfs/install-tegra.sh
-chroot /tmp/arfs /bin/bash -c /install-tegra.sh
-rm /tmp/arfs/install-tegra.sh
-
-cp /etc/X11/xorg.conf.d/tegra.conf /tmp/arfs/usr/share/X11/xorg.conf.d/
-
-# hack for removing uap0 device on startup (avoid freeze)
-echo 'install mwifiex_sdio /sbin/modprobe --ignore-install mwifiex_sdio && sleep 1 && iw dev uap0 del' > /tmp/arfs/etc/modprobe.d/mwifiex.conf 
-
-cat >/tmp/arfs/etc/udev/rules.d/99-tegra-lid-switch.rules <<EOF
-ACTION=="remove", GOTO="tegra_lid_switch_end"
-
-SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="platform", KERNELS=="gpio-keys.4", TAG+="power-switch"
-
-LABEL="tegra_lid_switch_end"
-EOF
 
 # alsa mixer settings to enable internal speakers
 cat > /tmp/arfs/var/lib/alsa/asound.state <<EOF
@@ -1995,23 +2015,97 @@ state.Venice2 {
 EOF
 
 
-echo "console=tty1 debug verbose root=${target_rootfs} rootwait rw lsm.module_locking=0" > kernel-config
-vbutil_arch="arm"
+#echo "console=tty1 debug verbose root=${target_rootfs} rootwait rw lsm.module_locking=0" > kernel-config
+#
+#current_rootfs="`rootdev -s`"
+#current_kernfs_num=$((${current_rootfs: -1:1}-1))
+#current_kernfs=${current_rootfs: 0:-1}$current_kernfs_num
+#
+#vbutil_kernel --repack ${target_kern} \
+#    --oldblob $current_kernfs \
+#    --keyblock /usr/share/vboot/devkeys/kernel.keyblock \
+#    --version 1 \
+#    --signprivate /usr/share/vboot/devkeys/kernel_data_key.vbprivk \
+#    --config kernel-config \
+#    --arch arm
+#
 
-current_rootfs="`rootdev -s`"
-current_kernfs_num=$((${current_rootfs: -1:1}-1))
-current_kernfs=${current_rootfs: 0:-1}$current_kernfs_num
+cat > /tmp/arfs/install-kernel.sh <<EOF
+cd /tmp
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/linux-nyan-3.10.18-8-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/linux-nyan-headers-3.10.18-8-armv7h.pkg.tar.xz
+yes | pacman --needed -U  linux-nyan-3.10.18-8-armv7h.pkg.tar.xz linux-nyan-headers-3.10.18-8-armv7h.pkg.tar.xz
 
-vbutil_kernel --repack ${target_kern} \
-    --oldblob $current_kernfs \
-    --keyblock /usr/share/vboot/devkeys/kernel.keyblock \
-    --version 1 \
-    --signprivate /usr/share/vboot/devkeys/kernel_data_key.vbprivk \
-    --config kernel-config \
-    --arch $vbutil_arch
+EOF
 
-#Set Ubuntu kernel partition as top priority for next boot (and next boot only)
-cgpt add -i 6 -P 5 -T 1 ${target_disk}
+chmod a+x /tmp/arfs/install-kernel.sh
+chroot /tmp/arfs /bin/bash -c /install-kernel.sh
+rm /tmp/arfs/install-kernel.sh
+
+#
+# Install (latest) proprietary NVIDIA Tegra124 drivers
+#
+# Since the required package is not available through the official
+# repositories (yet), we download the src package from my private
+# homepage and create the pacakge via makepkg ourself.
+#
+
+#cat > /tmp/arfs/install-tegra.sh <<EOF
+#cd /tmp
+#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
+#sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
+#cd gpu-nvidia-tegra-k1
+#sudo -u nobody -H makepkg
+#yes | pacman --needed -U gpu-nvidia-tegra-k1-*-21.4.0-4.1-armv7h.pkg.tar.xz
+#cd ..
+#rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
+#
+#usermod -aG video alarm
+#EOF
+#
+#chmod a+x /tmp/arfs/install-tegra.sh
+#chroot /tmp/arfs /bin/bash -c /install-tegra.sh
+#rm /tmp/arfs/install-tegra.sh
+
+cat > /tmp/arfs/install-tegra.sh <<EOF
+cd /tmp
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz
+sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz
+
+yes | pacman --needed -U  --force \
+                          gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz \
+                          gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz \
+                          gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz \
+                          gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz \
+                          gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz
+
+usermod -aG video alarm
+EOF
+
+chmod a+x /tmp/arfs/install-tegra.sh
+chroot /tmp/arfs /bin/bash -c /install-tegra.sh
+rm /tmp/arfs/install-tegra.sh
+
+
+cp /etc/X11/xorg.conf.d/tegra.conf /tmp/arfs/usr/share/X11/xorg.conf.d/
+
+# hack for removing uap0 device on startup (avoid freeze)
+echo 'install mwifiex_sdio /sbin/modprobe --ignore-install mwifiex_sdio && sleep 1 && iw dev uap0 del' > /tmp/arfs/etc/modprobe.d/mwifiex.conf 
+
+cat >/tmp/arfs/etc/udev/rules.d/99-tegra-lid-switch.rules <<EOF
+ACTION=="remove", GOTO="tegra_lid_switch_end"
+
+SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="platform", KERNELS=="gpio-keys.4", TAG+="power-switch"
+
+LABEL="tegra_lid_switch_end"
+EOF
+
+
+#Set ArchLinuxARM kernel partition as top priority for next boot (and next boot only)
+cgpt add -i ${kern_part} -P 5 -T 1 ${target_disk}
 
 echo -e "
 
@@ -2019,7 +2113,7 @@ Installation seems to be complete. If ArchLinux fails when you reboot,
 power off your Chrome OS device and then turn it back on. You'll be back
 in Chrome OS. If you're happy with ArchLinuxARM when you reboot be sure to run:
 
-sudo cgpt add -i 6 -P 5 -S 1 ${target_disk}
+sudo cgpt add -i ${kern_part} -P 5 -S 1 ${target_disk}
 
 To make it the default boot option. The ArchLinuxARM login is:
 
