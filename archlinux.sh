@@ -17,6 +17,50 @@ function exec_in_chroot () {
   fi
 }
 
+
+function setup_chroot () {
+
+  mount -o bind /proc ${MY_CHROOT_DIR}/proc
+  mount -o bind /dev ${MY_CHROOT_DIR}/dev
+  mount -o bind /dev/pts ${MY_CHROOT_DIR}/dev/pts
+  mount -o bind /sys ${MY_CHROOT_DIR}/sys
+
+}
+
+
+function copy_chros_files () {
+
+  mkdir -p ${MY_CHROOT_DIR}/run/resolvconf
+  cp /etc/resolv.conf ${MY_CHROOT_DIR}/run/resolvconf/
+  ln -s -f /run/resolvconf/resolv.conf ${MY_CHROOT_DIR}/etc/resolv.conf
+  echo alarm > ${MY_CHROOT_DIR}/etc/hostname
+  echo -e "\n127.0.1.1\tlocalhost.localdomain\tlocalhost\talarm" >> ${MY_CHROOT_DIR}/etc/hosts
+
+  KERN_VER=`uname -r`
+  mkdir -p ${MY_CHROOT_DIR}/lib/modules/$KERN_VER/
+  cp -ar /lib/modules/$KERN_VER/* ${MY_CHROOT_DIR}/lib/modules/$KERN_VER/
+  mkdir -p ${MY_CHROOT_DIR}/lib/firmware/
+  cp -ar /lib/firmware/* ${MY_CHROOT_DIR}/lib/firmware/
+
+}
+
+function install_dev_tools () {
+
+#
+# Add some development tools and put the alarm user into the
+# wheel group. Furthermore, grant ALL privileges via sudo to users
+# that belong to the wheel group
+#
+cat > ${MY_CHROOT_DIR}/install-develbase.sh <<EOF
+pacman -Syy --needed --noconfirm sudo wget dialog base-devel devtools vim rsync git vboot-utils
+usermod -aG wheel alarm
+sed -i 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
+EOF
+
+exec_in_chroot install-develbase.sh
+
+}
+
 function install_xbase () {
 
 cat > ${MY_CHROOT_DIR}/install-xbase.sh <<EOF
@@ -107,21 +151,6 @@ exec_in_chroot install-xfce4.sh
 
 
 function install_kernel () {
-
-#echo "console=tty1 debug verbose root=${target_rootfs} rootwait rw lsm.module_locking=0" > kernel-config
-#
-#current_rootfs="`rootdev -s`"
-#current_kernfs_num=$((${current_rootfs: -1:1}-1))
-#current_kernfs=${current_rootfs: 0:-1}$current_kernfs_num
-#
-#vbutil_kernel --repack ${target_kern} \
-#    --oldblob $current_kernfs \
-#    --keyblock /usr/share/vboot/devkeys/kernel.keyblock \
-#    --version 1 \
-#    --signprivate /usr/share/vboot/devkeys/kernel_data_key.vbprivk \
-#    --config kernel-config \
-#    --arch arm
-#
 
 cat > ${MY_CHROOT_DIR}/install-kernel.sh <<EOF
 
@@ -2077,51 +2106,11 @@ mount -t ext4 ${target_rootfs} /tmp/arfs
 tar_file="http://archlinuxarm.org/os/ArchLinuxARM-${archlinux_arch}-${archlinux_version}.tar.gz"
 wget -O - $tar_file | tar xzvvp -C /tmp/arfs/
 
-mount -o bind /proc /tmp/arfs/proc
-mount -o bind /dev /tmp/arfs/dev
-mount -o bind /dev/pts /tmp/arfs/dev/pts
-mount -o bind /sys /tmp/arfs/sys
+setup_chroot
 
-if [ -f /usr/bin/old_bins/cgpt ]
-then
-  cp /usr/bin/old_bins/cgpt /tmp/arfs/usr/bin/
-else
-  cp /usr/bin/cgpt /tmp/arfs/usr/bin/
-fi
+copy_chros_files
 
-chmod a+rx /tmp/arfs/usr/bin/cgpt
-if [ ! -d /tmp/arfs/run/resolvconf/ ] 
-then
-  mkdir /tmp/arfs/run/resolvconf/
-fi
-cp /etc/resolv.conf /tmp/arfs/run/resolvconf/
-ln -s -f /run/resolvconf/resolv.conf /tmp/arfs/etc/resolv.conf
-echo alarm > /tmp/arfs/etc/hostname
-echo -e "\n127.0.1.1\tlocalhost.localdomain\tlocalhost\talarm" >> /tmp/arfs/etc/hosts
-
-KERN_VER=`uname -r`
-mkdir -p /tmp/arfs/lib/modules/$KERN_VER/
-cp -ar /lib/modules/$KERN_VER/* /tmp/arfs/lib/modules/$KERN_VER/
-if [ ! -d /tmp/arfs/lib/firmware/ ]
-then
-  mkdir /tmp/arfs/lib/firmware/
-fi
-cp -ar /lib/firmware/* /tmp/arfs/lib/firmware/
-
-#
-# Add some development tools and put the alarm user into the
-# wheel group. Furthermore, grant ALL privileges via sudo to users
-# that belong to the wheel group
-#
-cat > /tmp/arfs/install-develbase.sh <<EOF
-pacman -Syy --needed --noconfirm sudo wget dialog base-devel devtools vim rsync git
-usermod -aG wheel alarm
-sed -i 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
-EOF
-
-chmod a+x /tmp/arfs/install-develbase.sh
-chroot /tmp/arfs /bin/bash -c /install-develbase.sh
-rm /tmp/arfs/install-develbase.sh
+install_dev_tools
 
 install_xbase
 
