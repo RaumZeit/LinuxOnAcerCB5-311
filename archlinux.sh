@@ -223,7 +223,7 @@ EOF
 
 function install_misc_utils () {
 
-cat > ${MY_CHROOT_PATH}/install-utils.sh <<EOF
+cat > ${MY_CHROOT_DIR}/install-utils.sh <<EOF
 pacman -Syy --needed --noconfirm  sshfs screen file-roller
 EOF
 
