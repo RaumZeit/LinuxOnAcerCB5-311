@@ -26,9 +26,7 @@ pacman -Syy --needed --noconfirm \
         lightdm lightdm-gtk-greeter \
         chromium chromium-pepper-flash \
         xorg-server xorg-server-utils xorg-apps xf86-input-synaptics \
-        xorg-twm xorg-xclock xterm xorg-xinit xorg-utils \
-        alsa-lib alsa-utils alsa-tools alsa-oss alsa-firmware alsa-plugins \
-        pulseaudio pulseaudio-alsa
+        xorg-twm xorg-xclock xterm xorg-xinit xorg-utils
 systemctl enable NetworkManager
 systemctl enable lightdm
 EOF
@@ -71,19 +69,6 @@ exec_in_chroot install-xorg-ABI-19.sh
 
 function install_xfce4 () {
 
-cat > ${MY_CHROOT_DIR}/install-xfce4.sh <<EOF
-
-pacman -Syy --needed --noconfirm  xfce4 xfce4-goodies
-# copy .xinitrc to already existing home of user 'alarm'
-cp /etc/skel/.xinitrc /home/alarm/.xinitrc
-cp /etc/skel/.xinitrc /home/alarm/.xprofile
-sed -i 's/exec startxfce4/# exec startxfce4/' /home/alarm/.xprofile
-chown alarm:users /home/alarm/.xinitrc
-chown alarm:users /home/alarm/.xprofile
-EOF
-
-exec_in_chroot install-xfce4.sh
-
 # add .xinitrc to /etc/skel that defaults to xfce4 session
 cat > ${MY_CHROOT_DIR}/etc/skel/.xinitrc <<EOF
 #!/bin/sh
@@ -104,6 +89,19 @@ fi
 exec startxfce4
 # ...or the Window Manager of your choice
 EOF
+
+cat > ${MY_CHROOT_DIR}/install-xfce4.sh <<EOF
+
+pacman -Syy --needed --noconfirm  xfce4 xfce4-goodies
+# copy .xinitrc to already existing home of user 'alarm'
+cp /etc/skel/.xinitrc /home/alarm/.xinitrc
+cp /etc/skel/.xinitrc /home/alarm/.xprofile
+sed -i 's/exec startxfce4/# exec startxfce4/' /home/alarm/.xprofile
+chown alarm:users /home/alarm/.xinitrc
+chown alarm:users /home/alarm/.xprofile
+EOF
+
+exec_in_chroot install-xfce4.sh
 
 }
 
@@ -179,7 +177,7 @@ cp /etc/X11/xorg.conf.d/tegra.conf ${MY_CHROOT_DIR}/usr/share/X11/xorg.conf.d/
 }
 
 
-function install_post_requirements () {
+function tweak_misc_stuff () {
 
 # hack for removing uap0 device on startup (avoid freeze)
 echo 'install mwifiex_sdio /sbin/modprobe --ignore-install mwifiex_sdio && sleep 1 && iw dev uap0 del' > ${MY_CHROOT_DIR}/etc/modprobe.d/mwifiex.conf 
@@ -194,237 +192,31 @@ EOF
 
 }
 
+function install_misc_utils () {
 
-# fw_type will always be developer for Mario.
-# Alex and ZGB need the developer BIOS installed though.
-fw_type="`crossystem mainfw_type`"
-if [ ! "$fw_type" = "developer" ]
-  then
-    echo -e "\nYou're Chromebook is not running a developer BIOS!"
-    echo -e "You need to run:"
-    echo -e ""
-    echo -e "sudo chromeos-firmwareupdate --mode=todev"
-    echo -e ""
-    echo -e "and then re-run this script."
-    exit 
-fi
-
-powerd_status="`initctl status powerd`"
-if [ ! "$powerd_status" = "powerd stop/waiting" ]
-then
-  echo -e "Stopping powerd to keep display from timing out..."
-  initctl stop powerd
-fi
-
-#setterm -blank 0
-
-echo ""
-echo "WARNING! This script will install binary packages from an unofficial source!"
-echo ""
-echo "If you don't trust me (Ronny Lorenz a.k.a. RaumZeit) press CTRL+C to quit"
-echo "(see https://github.com/RaumZeit/LinuxOnAcerCB5-311 for further details)"
-echo ""
-read -p "Press [Enter] to proceed installation of ArchLinuxARM"
-
-if [ "$1" != "" ]; then
-  target_disk=$1
-  echo "Got ${target_disk} as target drive"
-  echo ""
-  echo "WARNING! All data on this device will be wiped out! Continue at your own risk!"
-  echo ""
-  read -p "Press [Enter] to install ArchLinuxARM on ${target_disk} or CTRL+C to quit"
-
-  kern_part=1
-  root_part=2
-  ext_size="`blockdev --getsz ${target_disk}`"
-  aroot_size=$((ext_size - 65600 - 33))
-  cgpt create ${target_disk} 
-  cgpt add -i ${kern_part} -b 64 -s 32768 -S 1 -P 5 -l KERN-A -t "kernel" ${target_disk}
-  cgpt add -i ${root_part} -b 65600 -s $aroot_size -l ROOT-A -t "rootfs" ${target_disk}
-  sync
-  blockdev --rereadpt ${target_disk}
-  crossystem dev_boot_usb=1
-else
-  target_disk="`rootdev -d -s`"
-  kern_part=6
-  root_part=7
-  # Do partitioning (if we haven't already)
-  ckern_size="`cgpt show -i ${kern_part} -n -s -q ${target_disk}`"
-  croot_size="`cgpt show -i ${root_part} -n -s -q ${target_disk}`"
-  state_size="`cgpt show -i 1 -n -s -q ${target_disk}`"
-
-  max_archlinux_size=$(($state_size/1024/1024/2))
-  rec_archlinux_size=$(($max_archlinux_size - 1))
-  # If KERN-C and ROOT-C are one, we partition, otherwise assume they're what they need to be...
-  if [ "$ckern_size" =  "1" -o "$croot_size" = "1" ]
-  then
-    while :
-    do
-      read -p "Enter the size in gigabytes you want to reserve for ArchLinux. Acceptable range is 5 to $max_archlinux_size  but $rec_archlinux_size is the recommended maximum: " archlinux_size
-      if [ ! $archlinux_size -ne 0 2>/dev/null ]
-      then
-        echo -e "\n\nNumbers only please...\n\n"
-        continue
-      fi
-      if [ $archlinux_size -lt 5 -o $archlinux_size -gt $max_archlinux_size ]
-      then
-        echo -e "\n\nThat number is out of range. Enter a number 5 through $max_archlinux_size\n\n"
-        continue
-      fi
-      break
-    done
-    # We've got our size in GB for ROOT-C so do the math...
-
-    #calculate sector size for rootc
-    rootc_size=$(($archlinux_size*1024*1024*2))
-
-    #kernc is always 16mb
-    kernc_size=32768
-
-    #new stateful size with rootc and kernc subtracted from original
-    stateful_size=$(($state_size - $rootc_size - $kernc_size))
-
-    #start stateful at the same spot it currently starts at
-    stateful_start="`cgpt show -i 1 -n -b -q ${target_disk}`"
-
-    #start kernc at stateful start plus stateful size
-    kernc_start=$(($stateful_start + $stateful_size))
-
-    #start rootc at kernc start plus kernc size
-    rootc_start=$(($kernc_start + $kernc_size))
-
-    #Do the real work
-
-    echo -e "\n\nModifying partition table to make room for ArchLinux." 
-    echo -e "Your Chromebook will reboot, wipe your data and then"
-    echo -e "you should re-run this script..."
-    umount -l /mnt/stateful_partition
-
-    # stateful first
-    cgpt add -i 1 -b $stateful_start -s $stateful_size -l STATE ${target_disk}
-
-    # now kernc
-    cgpt add -i ${kern_part} -b $kernc_start -s $kernc_size -l KERN-C ${target_disk}
-
-    # finally rootc
-    cgpt add -i ${root_part} -b $rootc_start -s $rootc_size -l ROOT-C ${target_disk}
-
-    reboot
-    exit
-  fi
-fi
-
-# hwid lets us know if this is a Mario (Cr-48), Alex (Samsung Series 5), ZGB (Acer), etc
-hwid="`crossystem hwid`"
-
-chromebook_arch="`uname -m`"
-archlinux_arch="armv7"
-archlinux_version="latest"
-
-echo -e "\nChrome device model is: $hwid\n"
-
-echo -e "Installing ArchLinuxARM ${archlinux_version}\n"
-
-echo -e "Kernel Arch is: $chromebook_arch  Installing ArchLinuxARM Arch: ${archlinux_arch}\n"
-
-read -p "Press [Enter] to continue..."
-
-if [ ! -d /mnt/stateful_partition/archlinux ]
-then
-  mkdir /mnt/stateful_partition/archlinux
-fi
-
-cd /mnt/stateful_partition/archlinux
-
-if [[ "${target_disk}" =~ "mmcblk" ]]
-then
-  target_rootfs="${target_disk}p${root_part}"
-  target_kern="${target_disk}p${kern_part}"
-else
-  target_rootfs="${target_disk}${root_part}"
-  target_kern="${target_disk}${kern_part}"
-fi
-
-echo "Target Kernel Partition: $target_kern  Target Root FS: ${target_rootfs}"
-
-if mount|grep ${target_rootfs}
-then
-  echo "Refusing to continue since ${target_rootfs} is formatted and mounted. Try rebooting"
-  exit 
-fi
-
-mkfs.ext4 ${target_rootfs}
-
-if [ ! -d /tmp/arfs ]
-then
-  mkdir /tmp/arfs
-fi
-mount -t ext4 ${target_rootfs} /tmp/arfs
-
-tar_file="http://archlinuxarm.org/os/ArchLinuxARM-${archlinux_arch}-${archlinux_version}.tar.gz"
-wget -O - $tar_file | tar xzvvp -C /tmp/arfs/
-
-mount -o bind /proc /tmp/arfs/proc
-mount -o bind /dev /tmp/arfs/dev
-mount -o bind /dev/pts /tmp/arfs/dev/pts
-mount -o bind /sys /tmp/arfs/sys
-
-if [ -f /usr/bin/old_bins/cgpt ]
-then
-  cp /usr/bin/old_bins/cgpt /tmp/arfs/usr/bin/
-else
-  cp /usr/bin/cgpt /tmp/arfs/usr/bin/
-fi
-
-chmod a+rx /tmp/arfs/usr/bin/cgpt
-if [ ! -d /tmp/arfs/run/resolvconf/ ] 
-then
-  mkdir /tmp/arfs/run/resolvconf/
-fi
-cp /etc/resolv.conf /tmp/arfs/run/resolvconf/
-ln -s -f /run/resolvconf/resolv.conf /tmp/arfs/etc/resolv.conf
-echo alarm > /tmp/arfs/etc/hostname
-echo -e "\n127.0.1.1\tlocalhost.localdomain\tlocalhost\talarm" >> /tmp/arfs/etc/hosts
-
-KERN_VER=`uname -r`
-mkdir -p /tmp/arfs/lib/modules/$KERN_VER/
-cp -ar /lib/modules/$KERN_VER/* /tmp/arfs/lib/modules/$KERN_VER/
-if [ ! -d /tmp/arfs/lib/firmware/ ]
-then
-  mkdir /tmp/arfs/lib/firmware/
-fi
-cp -ar /lib/firmware/* /tmp/arfs/lib/firmware/
-
-#
-# Add some development tools and put the alarm user into the
-# wheel group. Furthermore, grant ALL privileges via sudo to users
-# that belong to the wheel group
-#
-cat > /tmp/arfs/install-develbase.sh <<EOF
-pacman -Syy --needed --noconfirm sudo wget dialog base-devel devtools vim rsync git
-usermod -aG wheel alarm
-sed -i 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
-EOF
-
-chmod a+x /tmp/arfs/install-develbase.sh
-chroot /tmp/arfs /bin/bash -c /install-develbase.sh
-rm /tmp/arfs/install-develbase.sh
-
-install_xbase
-
-install_xfce4
-
-cat > /tmp/arfs/install-utils.sh <<EOF
+cat > ${MY_CHROOT_PATH}/install-utils.sh <<EOF
 pacman -Syy --needed --noconfirm  sshfs screen file-roller
 EOF
 
-chmod a+x /tmp/arfs/install-utils.sh
-chroot /tmp/arfs /bin/bash -c /install-utils.sh
-rm /tmp/arfs/install-utils.sh
+exec_in_chroot install-utils.sh
 
+}
+
+
+function install_sound () {
+
+cat > ${MY_CHROOT_DIR}/install-sound.sh <<EOF
+
+pacman -Syy --needed --noconfirm \
+        alsa-lib alsa-utils alsa-tools alsa-oss alsa-firmware alsa-plugins \
+        pulseaudio pulseaudio-alsa
+EOF
+
+exec_in_chroot install-sound.sh
 
 # alsa mixer settings to enable internal speakers
-cat > /tmp/arfs/var/lib/alsa/asound.state <<EOF
+mkdir -p ${MY_CHROOT_DIR}/var/lib/alsa
+cat > ${MY_CHROOT_DIR}/var/lib/alsa/asound.state <<EOF
 state.HDATegra {
 	control.1 {
 		iface CARD
@@ -2114,12 +1906,236 @@ state.Venice2 {
 }
 EOF
 
+}
+
+# fw_type will always be developer for Mario.
+# Alex and ZGB need the developer BIOS installed though.
+fw_type="`crossystem mainfw_type`"
+if [ ! "$fw_type" = "developer" ]
+  then
+    echo -e "\nYou're Chromebook is not running a developer BIOS!"
+    echo -e "You need to run:"
+    echo -e ""
+    echo -e "sudo chromeos-firmwareupdate --mode=todev"
+    echo -e ""
+    echo -e "and then re-run this script."
+    exit 
+fi
+
+powerd_status="`initctl status powerd`"
+if [ ! "$powerd_status" = "powerd stop/waiting" ]
+then
+  echo -e "Stopping powerd to keep display from timing out..."
+  initctl stop powerd
+fi
+
+#setterm -blank 0
+
+echo ""
+echo "WARNING! This script will install binary packages from an unofficial source!"
+echo ""
+echo "If you don't trust me (Ronny Lorenz a.k.a. RaumZeit) press CTRL+C to quit"
+echo "(see https://github.com/RaumZeit/LinuxOnAcerCB5-311 for further details)"
+echo ""
+read -p "Press [Enter] to proceed installation of ArchLinuxARM"
+
+if [ "$1" != "" ]; then
+  target_disk=$1
+  echo "Got ${target_disk} as target drive"
+  echo ""
+  echo "WARNING! All data on this device will be wiped out! Continue at your own risk!"
+  echo ""
+  read -p "Press [Enter] to install ArchLinuxARM on ${target_disk} or CTRL+C to quit"
+
+  kern_part=1
+  root_part=2
+  ext_size="`blockdev --getsz ${target_disk}`"
+  aroot_size=$((ext_size - 65600 - 33))
+  cgpt create ${target_disk} 
+  cgpt add -i ${kern_part} -b 64 -s 32768 -S 1 -P 5 -l KERN-A -t "kernel" ${target_disk}
+  cgpt add -i ${root_part} -b 65600 -s $aroot_size -l ROOT-A -t "rootfs" ${target_disk}
+  sync
+  blockdev --rereadpt ${target_disk}
+  crossystem dev_boot_usb=1
+else
+  target_disk="`rootdev -d -s`"
+  kern_part=6
+  root_part=7
+  # Do partitioning (if we haven't already)
+  ckern_size="`cgpt show -i ${kern_part} -n -s -q ${target_disk}`"
+  croot_size="`cgpt show -i ${root_part} -n -s -q ${target_disk}`"
+  state_size="`cgpt show -i 1 -n -s -q ${target_disk}`"
+
+  max_archlinux_size=$(($state_size/1024/1024/2))
+  rec_archlinux_size=$(($max_archlinux_size - 1))
+  # If KERN-C and ROOT-C are one, we partition, otherwise assume they're what they need to be...
+  if [ "$ckern_size" =  "1" -o "$croot_size" = "1" ]
+  then
+    while :
+    do
+      read -p "Enter the size in gigabytes you want to reserve for ArchLinux. Acceptable range is 5 to $max_archlinux_size  but $rec_archlinux_size is the recommended maximum: " archlinux_size
+      if [ ! $archlinux_size -ne 0 2>/dev/null ]
+      then
+        echo -e "\n\nNumbers only please...\n\n"
+        continue
+      fi
+      if [ $archlinux_size -lt 5 -o $archlinux_size -gt $max_archlinux_size ]
+      then
+        echo -e "\n\nThat number is out of range. Enter a number 5 through $max_archlinux_size\n\n"
+        continue
+      fi
+      break
+    done
+    # We've got our size in GB for ROOT-C so do the math...
+
+    #calculate sector size for rootc
+    rootc_size=$(($archlinux_size*1024*1024*2))
+
+    #kernc is always 16mb
+    kernc_size=32768
+
+    #new stateful size with rootc and kernc subtracted from original
+    stateful_size=$(($state_size - $rootc_size - $kernc_size))
+
+    #start stateful at the same spot it currently starts at
+    stateful_start="`cgpt show -i 1 -n -b -q ${target_disk}`"
+
+    #start kernc at stateful start plus stateful size
+    kernc_start=$(($stateful_start + $stateful_size))
+
+    #start rootc at kernc start plus kernc size
+    rootc_start=$(($kernc_start + $kernc_size))
+
+    #Do the real work
+
+    echo -e "\n\nModifying partition table to make room for ArchLinux." 
+    echo -e "Your Chromebook will reboot, wipe your data and then"
+    echo -e "you should re-run this script..."
+    umount -l /mnt/stateful_partition
+
+    # stateful first
+    cgpt add -i 1 -b $stateful_start -s $stateful_size -l STATE ${target_disk}
+
+    # now kernc
+    cgpt add -i ${kern_part} -b $kernc_start -s $kernc_size -l KERN-C ${target_disk}
+
+    # finally rootc
+    cgpt add -i ${root_part} -b $rootc_start -s $rootc_size -l ROOT-C ${target_disk}
+
+    reboot
+    exit
+  fi
+fi
+
+# hwid lets us know if this is a Mario (Cr-48), Alex (Samsung Series 5), ZGB (Acer), etc
+hwid="`crossystem hwid`"
+
+chromebook_arch="`uname -m`"
+archlinux_arch="armv7"
+archlinux_version="latest"
+
+echo -e "\nChrome device model is: $hwid\n"
+
+echo -e "Installing ArchLinuxARM ${archlinux_version}\n"
+
+echo -e "Kernel Arch is: $chromebook_arch  Installing ArchLinuxARM Arch: ${archlinux_arch}\n"
+
+read -p "Press [Enter] to continue..."
+
+if [ ! -d /mnt/stateful_partition/archlinux ]
+then
+  mkdir /mnt/stateful_partition/archlinux
+fi
+
+cd /mnt/stateful_partition/archlinux
+
+if [[ "${target_disk}" =~ "mmcblk" ]]
+then
+  target_rootfs="${target_disk}p${root_part}"
+  target_kern="${target_disk}p${kern_part}"
+else
+  target_rootfs="${target_disk}${root_part}"
+  target_kern="${target_disk}${kern_part}"
+fi
+
+echo "Target Kernel Partition: $target_kern  Target Root FS: ${target_rootfs}"
+
+if mount|grep ${target_rootfs}
+then
+  echo "Refusing to continue since ${target_rootfs} is formatted and mounted. Try rebooting"
+  exit 
+fi
+
+mkfs.ext4 ${target_rootfs}
+
+if [ ! -d /tmp/arfs ]
+then
+  mkdir /tmp/arfs
+fi
+mount -t ext4 ${target_rootfs} /tmp/arfs
+
+tar_file="http://archlinuxarm.org/os/ArchLinuxARM-${archlinux_arch}-${archlinux_version}.tar.gz"
+wget -O - $tar_file | tar xzvvp -C /tmp/arfs/
+
+mount -o bind /proc /tmp/arfs/proc
+mount -o bind /dev /tmp/arfs/dev
+mount -o bind /dev/pts /tmp/arfs/dev/pts
+mount -o bind /sys /tmp/arfs/sys
+
+if [ -f /usr/bin/old_bins/cgpt ]
+then
+  cp /usr/bin/old_bins/cgpt /tmp/arfs/usr/bin/
+else
+  cp /usr/bin/cgpt /tmp/arfs/usr/bin/
+fi
+
+chmod a+rx /tmp/arfs/usr/bin/cgpt
+if [ ! -d /tmp/arfs/run/resolvconf/ ] 
+then
+  mkdir /tmp/arfs/run/resolvconf/
+fi
+cp /etc/resolv.conf /tmp/arfs/run/resolvconf/
+ln -s -f /run/resolvconf/resolv.conf /tmp/arfs/etc/resolv.conf
+echo alarm > /tmp/arfs/etc/hostname
+echo -e "\n127.0.1.1\tlocalhost.localdomain\tlocalhost\talarm" >> /tmp/arfs/etc/hosts
+
+KERN_VER=`uname -r`
+mkdir -p /tmp/arfs/lib/modules/$KERN_VER/
+cp -ar /lib/modules/$KERN_VER/* /tmp/arfs/lib/modules/$KERN_VER/
+if [ ! -d /tmp/arfs/lib/firmware/ ]
+then
+  mkdir /tmp/arfs/lib/firmware/
+fi
+cp -ar /lib/firmware/* /tmp/arfs/lib/firmware/
+
+#
+# Add some development tools and put the alarm user into the
+# wheel group. Furthermore, grant ALL privileges via sudo to users
+# that belong to the wheel group
+#
+cat > /tmp/arfs/install-develbase.sh <<EOF
+pacman -Syy --needed --noconfirm sudo wget dialog base-devel devtools vim rsync git
+usermod -aG wheel alarm
+sed -i 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
+EOF
+
+chmod a+x /tmp/arfs/install-develbase.sh
+chroot /tmp/arfs /bin/bash -c /install-develbase.sh
+rm /tmp/arfs/install-develbase.sh
+
+install_xbase
+
+install_xfce4
+
+install_sound
 
 install_kernel
 
 install_gpu_driver
 
-install_post_requirements
+install_misc_utils
+
+tweak_misc_stuff
 
 #Set ArchLinuxARM kernel partition as top priority for next boot (and next boot only)
 cgpt add -i ${kern_part} -P 5 -T 1 ${target_disk}
