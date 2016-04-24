@@ -1,6 +1,5 @@
 set -e
 
-MY_REPO_PATH="http://www.tbi.univie.ac.at/~ronny"
 MY_CHROOT_DIR=/tmp/arfs
 
 #
@@ -97,7 +96,7 @@ cd /tmp
 
 for p in ${packages[@]}
 do
-  sudo -u nobody -H wget ${MY_REPO_PATH}/$p
+  sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/$p
 done
 
 yes | pacman --needed -U  ${packages[@]}
@@ -161,7 +160,7 @@ cd /tmp
 
 for p in ${packages[@]}
 do
-  sudo -u nobody -H wget ${MY_REPO_PATH}/$p
+  sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/$p
 done
 
 yes | pacman --needed -U  ${packages[@]}
@@ -191,7 +190,7 @@ cd /tmp
 
 for p in ${packages[@]}
 do
-  sudo -u nobody -H wget ${MY_REPO_PATH}/$p
+  sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/$p
 done
 
 yes | pacman --needed -U  --force ${packages[@]}
