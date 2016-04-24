@@ -1,5 +1,6 @@
 set -e
 
+MY_REPO_PATH="http://www.tbi.univie.ac.at/~ronny"
 MY_CHROOT_DIR=/tmp/arfs
 
 #
@@ -50,7 +51,7 @@ function install_dev_tools () {
 # wheel group. Furthermore, grant ALL privileges via sudo to users
 # that belong to the wheel group
 #
-cat > ${MY_CHROOT_DIR}/install-develbase.sh <<EOF
+cat > ${MY_CHROOT_DIR}/install-develbase.sh << EOF
 pacman -Syy --needed --noconfirm sudo wget dialog base-devel devtools vim rsync git vboot-utils
 usermod -aG wheel alarm
 sed -i 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
@@ -85,7 +86,7 @@ exec_in_chroot install-xbase.sh
 # We also put the xorg-server and xf86-input-evdev/xf86-input-synaptics into
 # pacman's IgnorePkg
 #
-cat > ${MY_CHROOT_DIR}/install-xorg-ABI-19.sh <<EOF
+cat > ${MY_CHROOT_DIR}/install-xorg-ABI-19.sh << EOF
 
 packages=(xorg-server-1.17.2-4-armv7h.pkg.tar.xz
           xorg-server-common-1.17.2-4-armv7h.pkg.tar.xz
@@ -94,12 +95,12 @@ packages=(xorg-server-1.17.2-4-armv7h.pkg.tar.xz
 
 cd /tmp
 
-for p in ${packages[@]}
+for p in \${packages[@]}
 do
-  sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/$p
+  sudo -u nobody -H wget ${MY_REPO_PATH}/\$p
 done
 
-yes | pacman --needed -U  ${packages[@]}
+yes | pacman --needed -U  \${packages[@]}
 
 sed -i 's/#IgnorePkg   =/IgnorePkg   = xorg-server xorg-server-common xf86-input-evdev xf86-input-synaptics/' /etc/pacman.conf
 
@@ -113,7 +114,7 @@ exec_in_chroot install-xorg-ABI-19.sh
 function install_xfce4 () {
 
 # add .xinitrc to /etc/skel that defaults to xfce4 session
-cat > ${MY_CHROOT_DIR}/etc/skel/.xinitrc <<EOF
+cat > ${MY_CHROOT_DIR}/etc/skel/.xinitrc << EOF
 #!/bin/sh
 #
 # ~/.xinitrc
@@ -122,7 +123,7 @@ cat > ${MY_CHROOT_DIR}/etc/skel/.xinitrc <<EOF
 
 if [ -d /etc/X11/xinit/xinitrc.d ]; then
   for f in /etc/X11/xinit/xinitrc.d/*; do
-    [ -x "$f" ] && . "$f"
+    [ -x \"\$f\" ] && . \"\$f\"
   done
   unset f
 fi
@@ -133,7 +134,7 @@ exec startxfce4
 # ...or the Window Manager of your choice
 EOF
 
-cat > ${MY_CHROOT_DIR}/install-xfce4.sh <<EOF
+cat > ${MY_CHROOT_DIR}/install-xfce4.sh << EOF
 
 pacman -Syy --needed --noconfirm  xfce4 xfce4-goodies
 # copy .xinitrc to already existing home of user 'alarm'
@@ -151,19 +152,19 @@ exec_in_chroot install-xfce4.sh
 
 function install_kernel () {
 
-cat > ${MY_CHROOT_DIR}/install-kernel.sh <<EOF
+cat > ${MY_CHROOT_DIR}/install-kernel.sh << EOF
 
 packages=(linux-nyan-3.10.18-8-armv7h.pkg.tar.xz
           linux-nyan-headers-3.10.18-8-armv7h.pkg.tar.xz)
 
 cd /tmp
 
-for p in ${packages[@]}
+for p in \${packages[@]}
 do
-  sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/$p
+  sudo -u nobody -H wget ${MY_REPO_PATH}/\$p
 done
 
-yes | pacman --needed -U  ${packages[@]}
+yes | pacman --needed -U  \${packages[@]}
 
 EOF
 
@@ -178,7 +179,7 @@ function install_gpu_driver () {
 # Install (latest) proprietary NVIDIA Tegra124 drivers
 #
 
-cat > ${MY_CHROOT_DIR}/install-tegra.sh <<EOF
+cat > ${MY_CHROOT_DIR}/install-tegra.sh << EOF
 
 packages=(gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz
           gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz
@@ -188,12 +189,12 @@ packages=(gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz
 
 cd /tmp
 
-for p in ${packages[@]}
+for p in \${packages[@]}
 do
-  sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/$p
+  sudo -u nobody -H wget ${MY_REPO_PATH}/\$p
 done
 
-yes | pacman --needed -U  --force ${packages[@]}
+yes | pacman --needed -U  --force \${packages[@]}
 
 usermod -aG video alarm
 EOF
