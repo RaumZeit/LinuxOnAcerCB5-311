@@ -1,5 +1,200 @@
 set -e
 
+MY_REPO_PATH="http://www.tbi.univie.ac.at/~ronny"
+MY_CHROOT_DIR=/tmp/arfs
+
+#
+# Not, this function removes the script after execution
+#
+function exec_in_chroot () {
+
+  script=$1
+
+  if [ -f ${MY_CHROOT_DIR}/${script} ] ; then
+    chmod a+x ${MY_CHROOT_DIR}/${script}
+    chroot ${MY_CHROOT_DIR} /bin/bash -c /${script}
+    rm ${MY_CHROOT_DIR}/${script}
+  fi
+}
+
+function install_xbase () {
+
+cat > ${MY_CHROOT_DIR}/install-xbase.sh <<EOF
+
+pacman -Syy --needed --noconfirm \
+        iw networkmanager network-manager-applet \
+        lightdm lightdm-gtk-greeter \
+        chromium chromium-pepper-flash \
+        xorg-server xorg-server-utils xorg-apps xf86-input-synaptics \
+        xorg-twm xorg-xclock xterm xorg-xinit xorg-utils \
+        alsa-lib alsa-utils alsa-tools alsa-oss alsa-firmware alsa-plugins \
+        pulseaudio pulseaudio-alsa
+systemctl enable NetworkManager
+systemctl enable lightdm
+EOF
+
+exec_in_chroot install-xbase.sh
+
+#
+# ArchLinuxARM repo contains xorg-server >= 1.18 which
+# is incompatible with the proprietary NVIDIA drivers
+# Thus, we downgrade to xorg-server 1.17 and required
+# input device drivers from source package
+#
+# We also put the xorg-server and xf86-input-evdev/xf86-input-synaptics into
+# pacman's IgnorePkg
+#
+cat > ${MY_CHROOT_DIR}/install-xorg-ABI-19.sh <<EOF
+
+packages=(xorg-server-1.17.2-4-armv7h.pkg.tar.xz
+          xorg-server-common-1.17.2-4-armv7h.pkg.tar.xz
+          xf86-input-evdev-2.9.2-1-armv7h.pkg.tar.xz
+          xf86-input-synaptics-1.8.2-2-armv7h.pkg.tar.xz)
+
+cd /tmp
+
+for p in ${packages[@]}
+do
+  sudo -u nobody -H wget ${MY_REPO_PATH}/$p
+done
+
+yes | pacman --needed -U  ${packages[@]}
+
+sed -i 's/#IgnorePkg   =/IgnorePkg   = xorg-server xorg-server-common xf86-input-evdev xf86-input-synaptics/' /etc/pacman.conf
+
+EOF
+
+exec_in_chroot install-xorg-ABI-19.sh
+
+}
+
+
+function install_xfce4 () {
+
+cat > ${MY_CHROOT_DIR}/install-xfce4.sh <<EOF
+
+pacman -Syy --needed --noconfirm  xfce4 xfce4-goodies
+# copy .xinitrc to already existing home of user 'alarm'
+cp /etc/skel/.xinitrc /home/alarm/.xinitrc
+cp /etc/skel/.xinitrc /home/alarm/.xprofile
+sed -i 's/exec startxfce4/# exec startxfce4/' /home/alarm/.xprofile
+chown alarm:users /home/alarm/.xinitrc
+chown alarm:users /home/alarm/.xprofile
+EOF
+
+exec_in_chroot install-xfce4.sh
+
+# add .xinitrc to /etc/skel that defaults to xfce4 session
+cat > ${MY_CHROOT_DIR}/etc/skel/.xinitrc <<EOF
+#!/bin/sh
+#
+# ~/.xinitrc
+#
+# Executed by startx (run your window manager from here)
+
+if [ -d /etc/X11/xinit/xinitrc.d ]; then
+  for f in /etc/X11/xinit/xinitrc.d/*; do
+    [ -x "$f" ] && . "$f"
+  done
+  unset f
+fi
+
+# exec gnome-session
+# exec startkde
+exec startxfce4
+# ...or the Window Manager of your choice
+EOF
+
+}
+
+
+function install_kernel () {
+
+#echo "console=tty1 debug verbose root=${target_rootfs} rootwait rw lsm.module_locking=0" > kernel-config
+#
+#current_rootfs="`rootdev -s`"
+#current_kernfs_num=$((${current_rootfs: -1:1}-1))
+#current_kernfs=${current_rootfs: 0:-1}$current_kernfs_num
+#
+#vbutil_kernel --repack ${target_kern} \
+#    --oldblob $current_kernfs \
+#    --keyblock /usr/share/vboot/devkeys/kernel.keyblock \
+#    --version 1 \
+#    --signprivate /usr/share/vboot/devkeys/kernel_data_key.vbprivk \
+#    --config kernel-config \
+#    --arch arm
+#
+
+cat > ${MY_CHROOT_DIR}/install-kernel.sh <<EOF
+
+packages=(linux-nyan-3.10.18-8-armv7h.pkg.tar.xz
+          linux-nyan-headers-3.10.18-8-armv7h.pkg.tar.xz)
+
+cd /tmp
+
+for p in ${packages[@]}
+do
+  sudo -u nobody -H wget ${MY_REPO_PATH}/$p
+done
+
+yes | pacman --needed -U  ${packages[@]}
+
+EOF
+
+exec_in_chroot install-kernel.sh
+
+}
+
+
+function install_gpu_driver () {
+
+#
+# Install (latest) proprietary NVIDIA Tegra124 drivers
+#
+
+cat > ${MY_CHROOT_DIR}/install-tegra.sh <<EOF
+
+packages=(gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz)
+
+cd /tmp
+
+for p in ${packages[@]}
+do
+  sudo -u nobody -H wget ${MY_REPO_PATH}/$p
+done
+
+yes | pacman --needed -U  --force ${packages[@]}
+
+usermod -aG video alarm
+EOF
+
+exec_in_chroot install-tegra.sh
+
+cp /etc/X11/xorg.conf.d/tegra.conf ${MY_CHROOT_DIR}/usr/share/X11/xorg.conf.d/
+
+}
+
+
+function install_post_requirements () {
+
+# hack for removing uap0 device on startup (avoid freeze)
+echo 'install mwifiex_sdio /sbin/modprobe --ignore-install mwifiex_sdio && sleep 1 && iw dev uap0 del' > ${MY_CHROOT_DIR}/etc/modprobe.d/mwifiex.conf 
+
+cat > ${MY_CHROOT_DIR}/etc/udev/rules.d/99-tegra-lid-switch.rules <<EOF
+ACTION=="remove", GOTO="tegra_lid_switch_end"
+
+SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="platform", KERNELS=="gpio-keys.4", TAG+="power-switch"
+
+LABEL="tegra_lid_switch_end"
+EOF
+
+}
+
+
 # fw_type will always be developer for Mario.
 # Alex and ZGB need the developer BIOS installed though.
 fw_type="`crossystem mainfw_type`"
@@ -22,6 +217,14 @@ then
 fi
 
 #setterm -blank 0
+
+echo ""
+echo "WARNING! This script will install binary packages from an unofficial source!"
+echo ""
+echo "If you don't trust me (Ronny Lorenz a.k.a. RaumZeit) press CTRL+C to quit"
+echo "(see https://github.com/RaumZeit/LinuxOnAcerCB5-311 for further details)"
+echo ""
+read -p "Press [Enter] to proceed installation of ArchLinuxARM"
 
 if [ "$1" != "" ]; then
   target_disk=$1
@@ -207,112 +410,9 @@ chmod a+x /tmp/arfs/install-develbase.sh
 chroot /tmp/arfs /bin/bash -c /install-develbase.sh
 rm /tmp/arfs/install-develbase.sh
 
-cat > /tmp/arfs/install-xbase.sh <<EOF
-pacman -Syy --needed --noconfirm \
-        iw networkmanager network-manager-applet \
-        lightdm lightdm-gtk-greeter \
-        chromium chromium-pepper-flash \
-        xorg-server xorg-server-utils xorg-apps xf86-input-synaptics \
-        xorg-twm xorg-xclock xterm xorg-xinit xorg-utils \
-        alsa-lib alsa-utils alsa-tools alsa-oss alsa-firmware alsa-plugins \
-        pulseaudio pulseaudio-alsa
-systemctl enable NetworkManager
-systemctl enable lightdm
-EOF
+install_xbase
 
-chmod a+x /tmp/arfs/install-xbase.sh
-chroot /tmp/arfs /bin/bash -c /install-xbase.sh
-rm /tmp/arfs/install-xbase.sh
-
-
-
-#
-# Meanwhile, ArchLinuxARM repo contains xorg-server >= 1.18 which
-# is incompatible with the proprietary NVIDIA drivers
-# Thus, we downgrade to xorg-server 1.17 and required input device
-# drivers from source package
-#
-# We also put the xorg-server and xf86-input-evdev/xf86-input-synaptics into
-# pacman's IgnorePkg
-#
-cat > /tmp/arfs/install-xorg-ABI-19.sh <<EOF
-cd /tmp
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xorg-server-1.17.2-4-armv7h.pkg.tar.xz
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xorg-server-common-1.17.2-4-armv7h.pkg.tar.xz
-#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xorg-server-1.17.4-2.src.tar.gz
-#sudo -u nobody -H tar xzf xorg-server-1.17.4-2.src.tar.gz
-#cd xorg-server
-#sudo -u nobody -H makepkg -A --skippgpcheck
-#cd ..
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-evdev-2.9.2-1-armv7h.pkg.tar.xz
-#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-evdev-2.9.2-1.src.tar.gz
-#sudo -u nobody -H tar xzf xf86-input-evdev-2.9.2-1.src.tar.gz
-#cd xf86-input-evdev
-#sudo -u nobody -H makepkg -s -A --skippgpcheck
-#cd ..
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-synaptics-1.8.2-2-armv7h.pkg.tar.xz
-#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/xf86-input-synaptics-1.8.2-2.src.tar.gz
-#sudo -u nobody -H tar xzf xf86-input-synaptics-1.8.2-2.src.tar.gz
-#cd xf86-input-synaptics
-#sudo -u nobody -H makepkg -s -A
-#cd ..
-
-yes | pacman --needed -U  xorg-server-1.17.2-4-armv7h.pkg.tar.xz \
-                          xorg-server-common-1.17.2-4-armv7h.pkg.tar.xz \
-                          xf86-input-evdev-2.9.2-1-armv7h.pkg.tar.xz \
-                          xf86-input-synaptics-1.8.2-2-armv7h.pkg.tar.xz
-#yes | pacman --needed -U  xorg-server/xorg-server-1.17.4-2-armv7h.pkg.tar.xz \
-#                          xf86-input-evdev/xf86-input-evdev-2.9.2-1-armv7h.pkg.tar.xz \
-#                          xf86-input-synaptics/xf86-input-synaptics-1.8.2-2-armv7h.pkg.tar.xz
-
-#rm -rf  xorg-server xorg-server-1.17.4-2.src.tar.gz \
-#        xf86-input-evdev xf86-input-evdev-2.9.2-1.src.tar.gz \
-#        xf86-input-synaptics xf86-input-synaptics-1.8.2-2.src.tar.gz
-
-sed -i 's/#IgnorePkg   =/IgnorePkg   = xorg-server xorg-server-common xf86-input-evdev xf86-input-synaptics/' /etc/pacman.conf
-
-EOF
-
-chmod a+x /tmp/arfs/install-xorg-ABI-19.sh
-chroot /tmp/arfs /bin/bash -c /install-xorg-ABI-19.sh
-rm /tmp/arfs/install-xorg-ABI-19.sh
-
-
-
-# add .xinitrc to /etc/skel that defaults to xfce4 session
-cat > /tmp/arfs/etc/skel/.xinitrc <<EOF
-#!/bin/sh
-#
-# ~/.xinitrc
-#
-# Executed by startx (run your window manager from here)
-
-if [ -d /etc/X11/xinit/xinitrc.d ]; then
-  for f in /etc/X11/xinit/xinitrc.d/*; do
-    [ -x "$f" ] && . "$f"
-  done
-  unset f
-fi
-
-# exec gnome-session
-# exec startkde
-exec startxfce4
-# ...or the Window Manager of your choice
-EOF
-
-cat > /tmp/arfs/install-xfce4.sh <<EOF
-pacman -Syy --needed --noconfirm  xfce4 xfce4-goodies
-# copy .xinitrc to already existing home of user 'alarm'
-cp /etc/skel/.xinitrc /home/alarm/.xinitrc
-cp /etc/skel/.xinitrc /home/alarm/.xprofile
-sed -i 's/exec startxfce4/# exec startxfce4/' /home/alarm/.xprofile
-chown alarm:users /home/alarm/.xinitrc
-chown alarm:users /home/alarm/.xprofile
-EOF
-
-chmod a+x /tmp/arfs/install-xfce4.sh
-chroot /tmp/arfs /bin/bash -c /install-xfce4.sh
-rm /tmp/arfs/install-xfce4.sh
+install_xfce4
 
 cat > /tmp/arfs/install-utils.sh <<EOF
 pacman -Syy --needed --noconfirm  sshfs screen file-roller
@@ -2015,94 +2115,11 @@ state.Venice2 {
 EOF
 
 
-#echo "console=tty1 debug verbose root=${target_rootfs} rootwait rw lsm.module_locking=0" > kernel-config
-#
-#current_rootfs="`rootdev -s`"
-#current_kernfs_num=$((${current_rootfs: -1:1}-1))
-#current_kernfs=${current_rootfs: 0:-1}$current_kernfs_num
-#
-#vbutil_kernel --repack ${target_kern} \
-#    --oldblob $current_kernfs \
-#    --keyblock /usr/share/vboot/devkeys/kernel.keyblock \
-#    --version 1 \
-#    --signprivate /usr/share/vboot/devkeys/kernel_data_key.vbprivk \
-#    --config kernel-config \
-#    --arch arm
-#
+install_kernel
 
-cat > /tmp/arfs/install-kernel.sh <<EOF
-cd /tmp
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/linux-nyan-3.10.18-8-armv7h.pkg.tar.xz
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/linux-nyan-headers-3.10.18-8-armv7h.pkg.tar.xz
-yes | pacman --needed -U  linux-nyan-3.10.18-8-armv7h.pkg.tar.xz linux-nyan-headers-3.10.18-8-armv7h.pkg.tar.xz
+install_gpu_driver
 
-EOF
-
-chmod a+x /tmp/arfs/install-kernel.sh
-chroot /tmp/arfs /bin/bash -c /install-kernel.sh
-rm /tmp/arfs/install-kernel.sh
-
-#
-# Install (latest) proprietary NVIDIA Tegra124 drivers
-#
-# Since the required package is not available through the official
-# repositories (yet), we download the src package from my private
-# homepage and create the pacakge via makepkg ourself.
-#
-
-#cat > /tmp/arfs/install-tegra.sh <<EOF
-#cd /tmp
-#sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
-#sudo -u nobody -H tar xzf gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
-#cd gpu-nvidia-tegra-k1
-#sudo -u nobody -H makepkg
-#yes | pacman --needed -U gpu-nvidia-tegra-k1-*-21.4.0-4.1-armv7h.pkg.tar.xz
-#cd ..
-#rm -rf gpu-nvidia-tegra-k1 gpu-nvidia-tegra-k1-21.4.0-4.1.src.tar.gz
-#
-#usermod -aG video alarm
-#EOF
-#
-#chmod a+x /tmp/arfs/install-tegra.sh
-#chroot /tmp/arfs /bin/bash -c /install-tegra.sh
-#rm /tmp/arfs/install-tegra.sh
-
-cat > /tmp/arfs/install-tegra.sh <<EOF
-cd /tmp
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz
-sudo -u nobody -H wget http://www.tbi.univie.ac.at/~ronny/gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz
-
-yes | pacman --needed -U  --force \
-                          gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz \
-                          gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz \
-                          gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz \
-                          gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz \
-                          gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz
-
-usermod -aG video alarm
-EOF
-
-chmod a+x /tmp/arfs/install-tegra.sh
-chroot /tmp/arfs /bin/bash -c /install-tegra.sh
-rm /tmp/arfs/install-tegra.sh
-
-
-cp /etc/X11/xorg.conf.d/tegra.conf /tmp/arfs/usr/share/X11/xorg.conf.d/
-
-# hack for removing uap0 device on startup (avoid freeze)
-echo 'install mwifiex_sdio /sbin/modprobe --ignore-install mwifiex_sdio && sleep 1 && iw dev uap0 del' > /tmp/arfs/etc/modprobe.d/mwifiex.conf 
-
-cat >/tmp/arfs/etc/udev/rules.d/99-tegra-lid-switch.rules <<EOF
-ACTION=="remove", GOTO="tegra_lid_switch_end"
-
-SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="platform", KERNELS=="gpio-keys.4", TAG+="power-switch"
-
-LABEL="tegra_lid_switch_end"
-EOF
-
+install_post_requirements
 
 #Set ArchLinuxARM kernel partition as top priority for next boot (and next boot only)
 cgpt add -i ${kern_part} -P 5 -T 1 ${target_disk}
