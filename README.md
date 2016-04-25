@@ -26,12 +26,12 @@ kernel configs I prepared a dedicated linux kernel package for this device,
 which can be found in core/linux-nyan of the acer_cb_tegrak1 branch of my
 alarm PKGBUILDs fork:
 
-https://github.com/RaumZeit/PKGBUILDs/tree/acer_cb_tegrak1/core/linux-nyan
+https://github.com/RaumZeit/PKGBUILDs/tree/master/core/linux-nyan
 
 Additioanlly, I provide a preliminary PKGBUILD for the proprietary
 NVIDIA Tegra K1 GPU drivers in the same repository:
 
-https://github.com/RaumZeit/PKGBUILDs/tree/acer_cb_tegrak1/alarm/gpu-nvidia-tegra-k1
+https://github.com/RaumZeit/PKGBUILDs/tree/master/alarm/gpu-nvidia-tegra-k1
 
 Both packages work well, and I have not encountered any device specific
 problems yet, except that 'Suspend to RAM' is not working (yet).
