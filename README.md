@@ -36,13 +36,14 @@ https://github.com/RaumZeit/PKGBUILDs/tree/master/alarm/gpu-nvidia-tegra-k1
 Both packages work well, and I have not encountered any device specific
 problems yet, except that 'Suspend to RAM' is not working (yet).
 
+_Update_: Both packages are now automatically installed by the install script.
 
 ### Preparation
 This script installs an ArchLinuxARM system, together with an xfce4/xorg
 environment, including the proprietary NVidia drivers for the Tegra K1
 processor and its Kepler GPU.
 
-=> Reinstall Chrome OS in Developer Mode
+#### Reinstall Chrome OS in Developer Mode
 
 This sound complicated but is in fact really easy. Simply press
 
@@ -57,7 +58,14 @@ bootup. Simply press Ctrl-D on the boot screen to skip the
 delay.
 
 
-=> Repartition MMC card
+#### Repartition MMC card
+
+_Important_: First, you have choose where you want to install ArchLinuxARM
+to. By default, the script repartitions the internal emmc drive to make
+room for two additional partitions. However, you can install to a USB
+thumbdrive as well. Just append the full device name of your usb drive
+to the script. Note, however, that all existing data on this device will
+be destroyed.
 
 Open a Chrome window, press Ctrl + Alt + T to open a terminal
 window. Enter the following commands:
@@ -67,6 +75,11 @@ window. Enter the following commands:
 	wget https://raw.githubusercontent.com/RaumZeit/LinuxOnAcerCB5-311/archlinux/archlinux.sh
 	sudo bash archlinux.sh
 
+_Alternatively, execute the following if you install to USB drive and your
+device is `/dev/sda`_:
+
+	sudo bash archlinux.sh /dev/sda
+
 This will ask you how much space you would like to reserve for ArchLinuxARM. I chose
 16 GB. After changing the partition table the script will reboot the device.
 The boot loader will then recreate the chrome os partition used for user
@@ -74,7 +87,7 @@ content on the smaller partition, leaving the newly created partition for
 alarm untouched.
 
 
-==> Installing ArchLinuxARM
+#### Installing ArchLinuxARM
 
 Once again, open a Chrome window, press Ctrl + Alt + T to open a terminal
 window. Enter the following commands:
@@ -98,10 +111,13 @@ Root access can either be gained via sudo, or the root user:
 	Username:  root
 	Password:  root
 
-Remember to change the default passwords of both accounts, alarm AND root!
+__Remember to change the default passwords of both accounts, alarm AND root!__
 
 ### Post Scriptum
-Please note, that currently the chromium browser package available through the
+If've set up more complete setup how-to that might be of interest:
+http://www.tbi.univie.ac.at/~ronny/acer-cb5-311.html
+
+Please also note, that currently the chromium browser package available through the
 ArchLinux ARM repositories fails to run on many ARM platforms. This is due to some
 GCC 5.2 compilation issues that affects other programs as well. To find a
 possible fix for this problem is right now under investigation by the
@@ -110,5 +126,7 @@ As long as there is no fixed package available, please refer to the following
 forum topic for a working chromium browser package (compiled with GCC 5.1):
 
 http://archlinuxarm.org/forum/viewtopic.php?f=60&t=9109&start=10#p48213
+and
+https://archlinuxarm.org/forum/viewtopic.php?f=60&t=9109&start=40#p51481
 
 Copyright (c) 2015, 2015 Ronny Lorenz <ronny@tbi.univie.ac.at>
