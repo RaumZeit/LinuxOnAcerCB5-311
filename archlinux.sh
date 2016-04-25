@@ -1,10 +1,41 @@
 set -e
 
-MY_REPO_PATH="http://www.tbi.univie.ac.at/~ronny"
+CWD=`pwd`
+MY_REPO_PATH="http://www.tbi.univie.ac.at/~ronny/alarm/"
 MY_CHROOT_DIR=/tmp/arfs
+PROGRESS_PID=
+LOGFILE="${CWD}/archlinux-install.log"
+spin='-\|/'
+
+function progress () {
+  arg=$1
+  echo -n "$arg   "
+  while true
+  do
+    i=$(( (i+1) %4 ))
+    printf "\r$arg   ${spin:$i:1}"
+    sleep .1
+  done
+}
+
+function start_progress () {
+  # Start it in the background
+  progress "$1" &
+  # Save progress() PID
+  PROGRESS_PID=$!
+  disown
+}
+
+function end_progress () {
+
+# Kill progress
+kill ${PROGRESS_PID} >/dev/null  2>&1
+echo -n " ...done."
+echo
+}
 
 #
-# Not, this function removes the script after execution
+# Note, this function removes the script after execution
 #
 function exec_in_chroot () {
 
@@ -12,7 +43,7 @@ function exec_in_chroot () {
 
   if [ -f ${MY_CHROOT_DIR}/${script} ] ; then
     chmod a+x ${MY_CHROOT_DIR}/${script}
-    chroot ${MY_CHROOT_DIR} /bin/bash -c /${script}
+    chroot ${MY_CHROOT_DIR} /bin/bash -c /${script} >> ${LOGFILE} 2>&1
     rm ${MY_CHROOT_DIR}/${script}
   fi
 }
@@ -28,7 +59,25 @@ function setup_chroot () {
 }
 
 
+function unset_chroot () {
+
+  if [ "x${PROGRESS_PID}" != "x" ]
+  then
+    end_progress
+  fi
+
+  umount ${MY_CHROOT_DIR}/proc
+  umount ${MY_CHROOT_DIR}/dev
+  umount ${MY_CHROOT_DIR}/dev/pts
+  umount ${MY_CHROOT_DIR}/sys
+
+}
+
+trap unset_chroot EXIT
+
 function copy_chros_files () {
+
+  start_progress "Copying files from ChromeOS to ArchLinuxARM rootdir"
 
   mkdir -p ${MY_CHROOT_DIR}/run/resolvconf
   cp /etc/resolv.conf ${MY_CHROOT_DIR}/run/resolvconf/
@@ -42,9 +91,12 @@ function copy_chros_files () {
   mkdir -p ${MY_CHROOT_DIR}/lib/firmware/
   cp -ar /lib/firmware/* ${MY_CHROOT_DIR}/lib/firmware/
 
+  end_progress
 }
 
 function install_dev_tools () {
+
+start_progress "Installing development base packages"
 
 #
 # Add some development tools and put the alarm user into the
@@ -59,9 +111,12 @@ EOF
 
 exec_in_chroot install-develbase.sh
 
+end_progress
 }
 
 function install_xbase () {
+
+start_progress "Installing X-server basics"
 
 cat > ${MY_CHROOT_DIR}/install-xbase.sh <<EOF
 
@@ -77,6 +132,8 @@ EOF
 
 exec_in_chroot install-xbase.sh
 
+end_progress
+
 #
 # ArchLinuxARM repo contains xorg-server >= 1.18 which
 # is incompatible with the proprietary NVIDIA drivers
@@ -86,12 +143,19 @@ exec_in_chroot install-xbase.sh
 # We also put the xorg-server and xf86-input-evdev/xf86-input-synaptics into
 # pacman's IgnorePkg
 #
+start_progress "Downgrading xorg-server for compatibility with NVIDIA drivers"
+
 cat > ${MY_CHROOT_DIR}/install-xorg-ABI-19.sh << EOF
 
-packages=(xorg-server-1.17.2-4-armv7h.pkg.tar.xz
-          xorg-server-common-1.17.2-4-armv7h.pkg.tar.xz
-          xf86-input-evdev-2.9.2-1-armv7h.pkg.tar.xz
-          xf86-input-synaptics-1.8.2-2-armv7h.pkg.tar.xz)
+packages=(xorg-server-1.17.4-2-armv7h.pkg.tar.xz
+          xorg-server-common-1.17.4-2-armv7h.pkg.tar.xz
+          xorg-server-xvfb-1.17.4-2-armv7h.pkg.tar.xz
+          xf86-input-mouse-1.9.1-1-armv7h.pkg.tar.xz
+          xf86-input-keyboard-1.8.1-1-armv7h.pkg.tar.xz
+          xf86-input-evdev-2.10.0-1-armv7h.pkg.tar.xz
+          xf86-input-joystick-1.6.2-5-armv7h.pkg.tar.xz
+          xf86-input-synaptics-1.8.3-1-armv7h.pkg.tar.xz
+          xf86-video-fbdev-0.4.4-4-armv7h.pkg.tar.xz)
 
 cd /tmp
 
@@ -108,10 +172,14 @@ EOF
 
 exec_in_chroot install-xorg-ABI-19.sh
 
+end_progress
+
 }
 
 
 function install_xfce4 () {
+
+start_progress "Installing XFCE4"
 
 # add .xinitrc to /etc/skel that defaults to xfce4 session
 cat > ${MY_CHROOT_DIR}/etc/skel/.xinitrc << EOF
@@ -147,10 +215,14 @@ EOF
 
 exec_in_chroot install-xfce4.sh
 
+end_progress
+
 }
 
 
 function install_kernel () {
+
+start_progress "Installing kernel"
 
 cat > ${MY_CHROOT_DIR}/install-kernel.sh << EOF
 
@@ -170,10 +242,14 @@ EOF
 
 exec_in_chroot install-kernel.sh
 
+end_progress
+
 }
 
 
 function install_gpu_driver () {
+
+start_progress "Installing proprietart NVIDIA drivers"
 
 #
 # Install (latest) proprietary NVIDIA Tegra124 drivers
@@ -203,6 +279,8 @@ exec_in_chroot install-tegra.sh
 
 cp /etc/X11/xorg.conf.d/tegra.conf ${MY_CHROOT_DIR}/usr/share/X11/xorg.conf.d/
 
+end_progress
+
 }
 
 
@@ -223,16 +301,22 @@ EOF
 
 function install_misc_utils () {
 
+start_progress "Installing some more utilities"
+
 cat > ${MY_CHROOT_DIR}/install-utils.sh <<EOF
 pacman -Syy --needed --noconfirm  sshfs screen file-roller
 EOF
 
 exec_in_chroot install-utils.sh
 
+end_progress
+
 }
 
 
 function install_sound () {
+
+start_progress "Installing sound (alsa/pulseaudio)"
 
 cat > ${MY_CHROOT_DIR}/install-sound.sh <<EOF
 
@@ -1935,7 +2019,11 @@ state.Venice2 {
 }
 EOF
 
+end_progress
+
 }
+
+echo "" > $LOGFILE
 
 # fw_type will always be developer for Mario.
 # Alex and ZGB need the developer BIOS installed though.
@@ -2104,7 +2192,12 @@ fi
 mount -t ext4 ${target_rootfs} /tmp/arfs
 
 tar_file="http://archlinuxarm.org/os/ArchLinuxARM-${archlinux_arch}-${archlinux_version}.tar.gz"
-wget -O - $tar_file | tar xzvvp -C /tmp/arfs/
+
+start_progress "Downloading and extracting ArchLinuxARM rootfs"
+
+wget --quiet -O - $tar_file | tar xzvvp -C /tmp/arfs/ >> ${LOGFILE} 2>&1
+
+end_progress
 
 setup_chroot
 
