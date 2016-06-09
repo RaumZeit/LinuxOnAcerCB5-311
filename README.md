@@ -23,7 +23,7 @@ It lacks some of the required kernel configs for systemd. However, the
 ChromeOS kernel can still be used to boot the ArchLinuxARM system, which
 helps a lot for an initial setup. To solve the problem with the missing
 kernel configs I prepared a dedicated linux kernel package for this device,
-which can be found in core/linux-nyan of the acer_cb_tegrak1 branch of my
+which can be found in core/linux-nyan of the master branch of my
 alarm PKGBUILDs fork:
 
 https://github.com/RaumZeit/PKGBUILDs/tree/master/core/linux-nyan
