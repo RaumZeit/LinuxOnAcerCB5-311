@@ -91,6 +91,10 @@ function copy_chros_files () {
   mkdir -p ${MY_CHROOT_DIR}/lib/firmware/
   cp -ar /lib/firmware/* ${MY_CHROOT_DIR}/lib/firmware/
 
+  # remove tegra_lp0_resume firmware since it is owned by latest
+  # linux-nyan kernel package
+  rm ${MY_CHROOT_DIR}/lib/firmware/tegra12x/tegra_lp0_resume.fw
+
   end_progress
 }
 
@@ -226,8 +230,8 @@ start_progress "Installing kernel"
 
 cat > ${MY_CHROOT_DIR}/install-kernel.sh << EOF
 
-packages=(linux-nyan-3.10.18-9-armv7h.pkg.tar.xz
-          linux-nyan-headers-3.10.18-9-armv7h.pkg.tar.xz)
+packages=(linux-nyan-3.10.18-12-armv7h.pkg.tar.xz
+          linux-nyan-headers-3.10.18-12-armv7h.pkg.tar.xz)
 
 cd /tmp
 
@@ -249,7 +253,7 @@ end_progress
 
 function install_gpu_driver () {
 
-start_progress "Installing proprietart NVIDIA drivers"
+start_progress "Installing proprietary NVIDIA drivers"
 
 #
 # Install (latest) proprietary NVIDIA Tegra124 drivers
@@ -257,11 +261,11 @@ start_progress "Installing proprietart NVIDIA drivers"
 
 cat > ${MY_CHROOT_DIR}/install-tegra.sh << EOF
 
-packages=(gpu-nvidia-tegra-k1-nvrm-21.4.0-4.1-armv7h.pkg.tar.xz
-          gpu-nvidia-tegra-k1-x11-21.4.0-4.1-armv7h.pkg.tar.xz
-          gpu-nvidia-tegra-k1-openmax-21.4.0-4.1-armv7h.pkg.tar.xz
-          gpu-nvidia-tegra-k1-openmax-codecs-21.4.0-4.1-armv7h.pkg.tar.xz
-          gpu-nvidia-tegra-k1-libcuda-21.4.0-4.1-armv7h.pkg.tar.xz)
+packages=(gpu-nvidia-tegra-k1-nvrm-21.5.0-1-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-x11-21.5.0-1-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-openmax-21.5.0-1-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-openmax-codecs-21.5.0-1-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-libcuda-21.5.0-1-armv7h.pkg.tar.xz)
 
 cd /tmp
 
