@@ -261,11 +261,11 @@ start_progress "Installing proprietary NVIDIA drivers"
 
 cat > ${MY_CHROOT_DIR}/install-tegra.sh << EOF
 
-packages=(gpu-nvidia-tegra-k1-nvrm-21.5.0-1-armv7h.pkg.tar.xz
-          gpu-nvidia-tegra-k1-x11-21.5.0-1-armv7h.pkg.tar.xz
-          gpu-nvidia-tegra-k1-openmax-21.5.0-1-armv7h.pkg.tar.xz
-          gpu-nvidia-tegra-k1-openmax-codecs-21.5.0-1-armv7h.pkg.tar.xz
-          gpu-nvidia-tegra-k1-libcuda-21.5.0-1-armv7h.pkg.tar.xz)
+packages=(gpu-nvidia-tegra-k1-nvrm-21.5.0-2-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-x11-21.5.0-2-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-openmax-21.5.0-2-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-openmax-codecs-21.5.0-2-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-libcuda-21.5.0-2-armv7h.pkg.tar.xz)
 
 cd /tmp
 
