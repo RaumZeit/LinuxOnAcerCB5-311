@@ -230,8 +230,8 @@ start_progress "Installing kernel"
 
 cat > ${MY_CHROOT_DIR}/install-kernel.sh << EOF
 
-packages=(linux-nyan-3.10.18-18-armv7h.pkg.tar.xz
-          linux-nyan-headers-3.10.18-18-armv7h.pkg.tar.xz)
+packages=(linux-nyan-3.10.18-19-armv7h.pkg.tar.xz
+          linux-nyan-headers-3.10.18-19-armv7h.pkg.tar.xz)
 
 cd /tmp
 
@@ -261,11 +261,11 @@ start_progress "Installing proprietary NVIDIA drivers"
 
 cat > ${MY_CHROOT_DIR}/install-tegra.sh << EOF
 
-packages=(gpu-nvidia-tegra-k1-nvrm-21.5.0-3-armv7h.pkg.tar.xz
-          gpu-nvidia-tegra-k1-x11-21.5.0-3-armv7h.pkg.tar.xz
-          gpu-nvidia-tegra-k1-openmax-21.5.0-3-armv7h.pkg.tar.xz
-          gpu-nvidia-tegra-k1-openmax-codecs-21.5.0-3-armv7h.pkg.tar.xz
-          gpu-nvidia-tegra-k1-libcuda-21.5.0-3-armv7h.pkg.tar.xz)
+packages=(gpu-nvidia-tegra-k1-nvrm-21.5.0-4-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-x11-21.5.0-4-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-openmax-21.5.0-4-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-openmax-codecs-21.5.0-4-armv7h.pkg.tar.xz
+          gpu-nvidia-tegra-k1-libcuda-21.5.0-4-armv7h.pkg.tar.xz)
 
 cd /tmp
 
