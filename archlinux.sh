@@ -127,7 +127,7 @@ cat > ${MY_CHROOT_DIR}/install-xbase.sh <<EOF
 pacman -Syy --needed --noconfirm \
         iw networkmanager network-manager-applet \
         lightdm lightdm-gtk-greeter \
-        chromium chromium-pepper-flash \
+        chromium \
         xorg-server xorg-server-utils xorg-apps xf86-input-synaptics \
         xorg-twm xorg-xclock xterm xorg-xinit xorg-utils
 systemctl enable NetworkManager
@@ -230,8 +230,8 @@ start_progress "Installing kernel"
 
 cat > ${MY_CHROOT_DIR}/install-kernel.sh << EOF
 
-packages=(linux-nyan-3.10.18-19-armv7h.pkg.tar.xz
-          linux-nyan-headers-3.10.18-19-armv7h.pkg.tar.xz)
+packages=(linux-nyan-3.10.18-20-armv7h.pkg.tar.xz
+          linux-nyan-headers-3.10.18-20-armv7h.pkg.tar.xz)
 
 cd /tmp
 
