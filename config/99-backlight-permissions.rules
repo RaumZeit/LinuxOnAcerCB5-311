@@ -1,0 +1,2 @@
+KERNEL=="pwm-backlight" SUBSYSTEM=="backlight" RUN+="/bin/chmod 664 /sys/class/backlight/pwm-backlight/brightness"
+KERNEL=="pwm-backlight" SUBSYSTEM=="backlight" RUN+="/bin/chgrp video /sys/class/backlight/pwm-backlight/brightness"
