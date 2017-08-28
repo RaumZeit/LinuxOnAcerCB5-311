@@ -128,8 +128,8 @@ pacman -Syy --needed --noconfirm \
         iw networkmanager network-manager-applet \
         lightdm lightdm-gtk-greeter \
         chromium \
-        xorg-server xorg-server-utils xorg-apps xf86-input-synaptics \
-        xorg-twm xorg-xclock xterm xorg-xinit xorg-utils
+        xorg-server xorg-apps xf86-input-synaptics \
+        xorg-twm xorg-xclock xterm xorg-xinit
 systemctl enable NetworkManager
 systemctl enable lightdm
 EOF
