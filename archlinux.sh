@@ -170,7 +170,7 @@ done
 
 yes | pacman --needed -U  \${packages[@]}
 
-sed -i 's/#IgnorePkg   =/IgnorePkg   = xorg-server xorg-server-common xf86-input-evdev xf86-input-synaptics/' /etc/pacman.conf
+sed -i 's/#IgnorePkg   =/IgnorePkg   = xorg-server xorg-server-common xorg-server-xvfb xf86-input-mouse xf86-input-keyboard xf86-input-evdev xf86-input-joystick xf86-input-synaptics xf86-video-fbdev/' /etc/pacman.conf
 
 EOF
 
