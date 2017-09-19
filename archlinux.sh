@@ -230,8 +230,8 @@ start_progress "Installing kernel"
 
 cat > ${MY_CHROOT_DIR}/install-kernel.sh << EOF
 
-packages=(linux-nyan-3.10.18-23-armv7h.pkg.tar.xz
-          linux-nyan-headers-3.10.18-23-armv7h.pkg.tar.xz)
+packages=(linux-nyan-3.10.18-24-armv7h.pkg.tar.xz
+          linux-nyan-headers-3.10.18-24-armv7h.pkg.tar.xz)
 
 cd /tmp
 
