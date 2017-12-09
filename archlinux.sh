@@ -159,7 +159,8 @@ packages=(xorg-server-1.17.4-2-armv7h.pkg.tar.xz
           xf86-input-evdev-2.10.0-1-armv7h.pkg.tar.xz
           xf86-input-joystick-1.6.2-5-armv7h.pkg.tar.xz
           xf86-input-synaptics-1.8.3-1-armv7h.pkg.tar.xz
-          xf86-video-fbdev-0.4.4-4-armv7h.pkg.tar.xz)
+          xf86-video-fbdev-0.4.4-4-armv7h.pkg.tar.xz
+          libxfont-1.5.3-1-armv7h.pkg.tar.xz)
 
 cd /tmp
 
