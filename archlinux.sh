@@ -108,7 +108,7 @@ start_progress "Installing development base packages"
 # that belong to the wheel group
 #
 cat > ${MY_CHROOT_DIR}/install-develbase.sh << EOF
-pacman -Syy --needed --noconfirm sudo wget dialog base-devel devtools vim rsync git vboot-utils
+pacman -Syyu --needed --noconfirm sudo wget dialog base-devel devtools vim rsync git vboot-utils
 usermod -aG wheel alarm
 sed -i 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
 EOF
@@ -2162,6 +2162,9 @@ echo -e "Kernel Arch is: $chromebook_arch  Installing ArchLinuxARM Arch: ${archl
 
 read -p "Press [Enter] to continue..."
 
+read -p "Install XFCE? (y/N) " -n 1 -r
+echo    # (optional) move to a new line
+
 if [ ! -d /mnt/stateful_partition/archlinux ]
 then
   mkdir /mnt/stateful_partition/archlinux
@@ -2210,7 +2213,11 @@ install_dev_tools
 
 install_xbase
 
-install_xfce4
+if [[ $REPLY =~ ^[Yy]$ ]]
+then
+    install_xfce4
+fi
+
 
 install_sound
 
