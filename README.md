@@ -72,7 +72,7 @@ window. Enter the following commands:
 
 	shell
 	cd ~/Downloads
-	wget https://raw.githubusercontent.com/RaumZeit/LinuxOnAcerCB5-311/archlinux/archlinux.sh
+	curl -L -O https://raw.githubusercontent.com/RaumZeit/LinuxOnAcerCB5-311/archlinux/archlinux.sh
 	sudo bash archlinux.sh
 
 _Alternatively, execute the following if you install to USB drive and your
@@ -94,7 +94,7 @@ window. Enter the following commands:
 
 	shell
 	cd ~/Downloads
-	wget https://raw.githubusercontent.com/RaumZeit/LinuxOnAcerCB5-311/archlinux/archlinux.sh
+	curl -L -O https://raw.githubusercontent.com/RaumZeit/LinuxOnAcerCB5-311/archlinux/archlinux.sh
 	sudo bash archlinux.sh
 
 This time the script auto-detects that the target partition already exists and

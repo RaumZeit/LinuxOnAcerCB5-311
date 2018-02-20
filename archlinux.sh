@@ -108,7 +108,7 @@ start_progress "Installing development base packages"
 # that belong to the wheel group
 #
 cat > ${MY_CHROOT_DIR}/install-develbase.sh << EOF
-pacman -Syy --needed --noconfirm sudo wget dialog base-devel devtools vim rsync git vboot-utils
+pacman -Syy --needed --noconfirm sudo dialog base-devel devtools vim rsync git vboot-utils
 usermod -aG wheel alarm
 sed -i 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
 EOF
@@ -160,13 +160,13 @@ packages=(xorg-server-1.17.4-2-armv7h.pkg.tar.xz
           xf86-input-joystick-1.6.2-5-armv7h.pkg.tar.xz
           xf86-input-synaptics-1.8.3-1-armv7h.pkg.tar.xz
           xf86-video-fbdev-0.4.4-4-armv7h.pkg.tar.xz
-          libxfont-1.5.3-1-armv7h.pkg.tar.xz)
+          libxfont-1.5.3-1.1-armv7h.pkg.tar.xz)
 
 cd /tmp
 
 for p in \${packages[@]}
 do
-  sudo -u nobody -H wget ${MY_REPO_PATH}/\$p
+  sudo -u nobody -H curl -s -L -O ${MY_REPO_PATH}/\$p
 done
 
 yes | pacman --needed -U  \${packages[@]}
@@ -238,7 +238,7 @@ cd /tmp
 
 for p in \${packages[@]}
 do
-  sudo -u nobody -H wget ${MY_REPO_PATH}/\$p
+  sudo -u nobody -H curl -s -L -O ${MY_REPO_PATH}/\$p
 done
 
 yes | pacman --needed -U  \${packages[@]}
@@ -272,7 +272,7 @@ cd /tmp
 
 for p in \${packages[@]}
 do
-  sudo -u nobody -H wget ${MY_REPO_PATH}/\$p
+  sudo -u nobody -H curl -s -L -O ${MY_REPO_PATH}/\$p
 done
 
 yes | pacman --needed -U  --force \${packages[@]}
@@ -2194,11 +2194,11 @@ then
 fi
 mount -t ext4 ${target_rootfs} /tmp/arfs
 
-tar_file="http://archlinuxarm.org/os/ArchLinuxARM-${archlinux_arch}-${archlinux_version}.tar.gz"
+tar_file="http://os.archlinuxarm.org/os/ArchLinuxARM-${archlinux_arch}-${archlinux_version}.tar.gz"
 
 start_progress "Downloading and extracting ArchLinuxARM rootfs"
 
-wget --quiet -O - $tar_file | tar xzvvp -C /tmp/arfs/ >> ${LOGFILE} 2>&1
+curl -s -L --output - $tar_file | tar xzvvp -C /tmp/arfs/ >> ${LOGFILE} 2>&1
 
 end_progress
 
