@@ -3,12 +3,12 @@
 
 pkgname=libxfont
 pkgver=1.5.3
-pkgrel=1
+pkgrel=1.1
 pkgdesc="X11 font rasterisation library"
 arch=(i686 x86_64)
 url="https://xorg.freedesktop.org/"
 license=('custom')
-depends=('freetype2' 'libfontenc' 'xproto' 'fontsproto>=2.1.3')
+depends=('freetype2' 'libfontenc' 'xproto' 'fontsproto')
 makedepends=('xorg-util-macros' 'xtrans')
 source=(${url}/archive/individual/lib/libXfont-${pkgver}.tar.bz2{,.sig})
 sha256sums=('ab85c10fd2683481dfef672a77fe60e6a2039558cbc0e9bf56b5e1df471c93d0'
