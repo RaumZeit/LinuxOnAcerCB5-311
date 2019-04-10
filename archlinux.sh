@@ -66,10 +66,12 @@ function unset_chroot () {
     end_progress
   fi
 
-  umount ${MY_CHROOT_DIR}/proc
-  umount ${MY_CHROOT_DIR}/dev
-  umount ${MY_CHROOT_DIR}/dev/pts
+  # unmount chroot
   umount ${MY_CHROOT_DIR}/sys
+  umount ${MY_CHROOT_DIR}/dev/pts
+  umount ${MY_CHROOT_DIR}/dev
+  umount ${MY_CHROOT_DIR}/proc
+  umount ${MY_CHROOT_DIR}
 
 }
 
