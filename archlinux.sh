@@ -66,6 +66,10 @@ function unset_chroot () {
     end_progress
   fi
 
+  # kill gpg-agent just in case we aborted after
+  # pacman-key --init
+  kill -9 `ps aux | grep gpg-agent | awk '{print $2}'`
+
   # unmount chroot
   umount ${MY_CHROOT_DIR}/sys
   umount ${MY_CHROOT_DIR}/dev/pts
@@ -75,7 +79,7 @@ function unset_chroot () {
 
 }
 
-trap unset_chroot EXIT
+trap unset_chroot EXIT SIGHUP SIGQUIT SIGTERM SIGABRT
 
 function copy_chros_files () {
 
@@ -98,6 +102,56 @@ function copy_chros_files () {
   rm ${MY_CHROOT_DIR}/lib/firmware/tegra12x/tegra_lp0_resume.fw
 
   end_progress
+}
+
+function install_prerequisites () {
+
+start_progress "Setting Locale to en_US.UTF-8"
+
+cat > ${MY_CHROOT_DIR}/locale-set.sh << EOF
+sed -i 's/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+locale-gen
+sed -i 's/LANG=C/LANG=en_US.UTF-8/' /etc/locale.conf
+EOF
+
+exec_in_chroot locale-set.sh
+
+end_progress
+
+printf "\033[1;31m"
+printf "About to initialize the pacman keyring!\n"
+printf "\033[0;32mThis requires some initialization entropy to complete quickly!\n"
+printf "\033[0mMove around the mouse, open some tabs and surf the internet. This should generate enough entropy...\n"
+
+#
+# Make sure, that the archlinux keyring is populated
+#
+# ... also use curl to download packages with pacman to
+# enable larger timeout for slow wifi connections
+#
+start_progress "Initializing pacman keyring"
+cat > ${MY_CHROOT_DIR}/pacman-keyring.sh << EOF
+sed -i 's/#XferCommand = \/usr\/bin\/curl -L -C - -f -o %o %u/XferCommand = \/usr\/bin\/curl -L -C - -f --connect-timeout 60 -o %o %u/' /etc/pacman.conf
+pacman-key --init
+pacman-key --populate archlinuxarm
+EOF
+
+exec_in_chroot pacman-keyring.sh
+
+end_progress
+}
+
+function restore_pacman_conf () {
+
+start_progress "Restoring /etc/pacman.conf"
+
+cat > ${MY_CHROOT_DIR}/restore-pacman-conf.sh << EOF
+sed -i 's/XferCommand = \/usr\/bin\/curl -L -C - -f --connect-timeout 60 -o %o %u/#XferCommand = \/usr\/bin\/curl -L -C - -f -o %o %u/' /etc/pacman.conf
+EOF
+
+exec_in_chroot restore-pacman-conf.sh
+
+end_progress
 }
 
 function install_dev_tools () {
@@ -2208,6 +2262,8 @@ setup_chroot
 
 copy_chros_files
 
+install_prerequisites
+
 install_dev_tools
 
 install_xbase
@@ -2223,6 +2279,9 @@ install_gpu_driver
 install_misc_utils
 
 tweak_misc_stuff
+
+restore_pacman_conf
+
 
 #Set ArchLinuxARM kernel partition as top priority for next boot (and next boot only)
 cgpt add -i ${kern_part} -P 5 -T 1 ${target_disk}
